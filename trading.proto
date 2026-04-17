@@ -1,0 +1,182 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+
+service TradingService {
+  rpc StreamEvents(StreamEventsRequest) returns (stream TradingEvent);
+}
+
+message StreamEventsRequest {
+  string account_id = 1;
+  repeated EventType subscriptions = 2;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_INTENT = 1;
+  EVENT_TYPE_BROKER_ORDER = 2;
+  EVENT_TYPE_BROKER_POSITION = 3;
+  EVENT_TYPE_INTENT_RESULT = 4;
+}
+
+message TradingEvent {
+  oneof event {
+    Intent intent = 1;
+    BrokerOrder broker_order = 2;
+    Connected connected = 3;
+    Heartbeat heartbeat = 4;
+    BrokerPosition broker_position = 5;
+    IntentResult intent_result = 6;
+  }
+}
+
+message Connected {
+  repeated EventType subscriptions = 1;
+}
+
+message Heartbeat {
+  google.protobuf.Timestamp sent_at = 1;
+}
+
+//
+// --------------------
+// INTENT
+// --------------------
+//
+
+message Intent {
+  string id = 1;
+  string account_id = 2;
+  string organization_id = 3;
+  optional string reference_id = 4;
+  IntentAction action = 5;
+  string action_id = 6;
+}
+
+message IntentAction {
+  oneof kind {
+    CreateOrder create = 1;
+    ReplaceOrder replace = 2;
+    CancelOrder cancel = 3;
+  }
+}
+
+message CreateOrder {
+  string symbol = 1;
+  string route_strategy = 2;
+  string order_side = 3;
+  OrderSpec order_spec = 4;
+}
+
+message ReplaceOrder {
+  OrderSpec order_spec = 1;
+  string intent_id = 2;
+}
+
+message CancelOrder {
+  string intent_id = 1;
+}
+
+message OrderSpec {
+  oneof kind {
+    LimitOrderSpec limit = 1;
+    MarketOrderSpec market = 2;
+  }
+}
+
+message LimitOrderSpec {
+  Price price = 1;
+  int64 quantity = 2;
+  string time_in_force = 3;
+}
+
+message MarketOrderSpec {
+  int64 quantity = 1;
+}
+
+//
+// --------------------
+// INTENT RESULT (STATE TRANSITIONS)
+// --------------------
+//
+
+enum IntentResultStatus {
+  INTENT_RESULT_STATUS_UNSPECIFIED = 0;
+
+  // transport-level
+  INTENT_RESULT_STATUS_SUBMITTED = 1;  // websocket write succeeded
+  INTENT_RESULT_STATUS_FAILED = 2;     // send failed
+
+  // broker-level
+  INTENT_RESULT_STATUS_ACCEPTED = 3;
+  INTENT_RESULT_STATUS_REJECTED = 4;
+  INTENT_RESULT_STATUS_CANCELLED = 5;
+  INTENT_RESULT_STATUS_FILLED = 6;
+  INTENT_RESULT_STATUS_PARTIALLY_FILLED = 7;
+  INTENT_RESULT_STATUS_SKIPPED = 8;
+}
+
+message IntentResult {
+  string action_id = 1;
+  string intent_id = 2;
+
+  IntentResultStatus status = 3;
+
+  reserved 4;
+  reserved "broker_order_id";
+  optional string error = 5;
+
+  google.protobuf.Timestamp published_at = 6;
+}
+
+//
+// --------------------
+// BROKER DATA
+// --------------------
+//
+
+message BrokerOrder {
+  string order_id = 1;
+  string intent_id = 2;
+
+  optional string external_order_id = 3;
+
+  string account_id = 4;
+  string broker = 5;
+  string symbol = 6;
+
+  string order_state = 7;
+  string order_status = 8;
+
+  string order_type = 9;
+  string order_side = 10;
+
+  optional Price limit_price = 11;
+  optional Price average_price = 12;
+
+  string route_strategy = 13;
+  int64 quantity = 14;
+  optional int64 filled_quantity = 15;
+
+  string time_in_force = 16;
+
+  google.protobuf.Timestamp received_at = 17;
+  string organization_id = 18;
+}
+
+message BrokerPosition {
+  string account_id = 1;
+  string symbol = 2;
+  int64 quantity = 3;
+  Price average_cost = 4;
+  google.protobuf.Timestamp received_at = 5;
+  string organization_id = 6;
+  string broker = 7;
+}
+
+message Price {
+  int64 integer = 1;
+  uint32 precision = 2;
+}
