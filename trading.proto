@@ -11,6 +11,7 @@ service TradingService {
 message StreamEventsRequest {
   string account_id = 1;
   repeated EventType subscriptions = 2;
+  string symbol = 3;
 }
 
 enum EventType {
