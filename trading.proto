@@ -16,20 +16,18 @@ message StreamEventsRequest {
 
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
-  EVENT_TYPE_INTENT = 1;
-  EVENT_TYPE_BROKER_ORDER = 2;
-  EVENT_TYPE_BROKER_POSITION = 3;
-  EVENT_TYPE_INTENT_RESULT = 4;
+  EVENT_TYPE_BROKER_ORDER = 1;
+  EVENT_TYPE_BROKER_POSITION = 2;
+  EVENT_TYPE_INTENT_RESULT = 3;
 }
 
 message TradingEvent {
   oneof event {
-    Intent intent = 1;
-    BrokerOrder broker_order = 2;
-    Connected connected = 3;
-    Heartbeat heartbeat = 4;
-    BrokerPosition broker_position = 5;
-    IntentResult intent_result = 6;
+    Connected connected = 1;
+    Heartbeat heartbeat = 2;
+    BrokerOrder broker_order = 3;
+    BrokerPosition broker_position = 4;
+    IntentResult intent_result = 5;
   }
 }
 
