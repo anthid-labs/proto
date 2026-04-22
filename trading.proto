@@ -56,62 +56,6 @@ message Heartbeat {
 
 //
 // --------------------
-// INTENT
-// --------------------
-//
-
-message Intent {
-  string id = 1;
-  string account_id = 2;
-  string organization_id = 3;
-  optional string reference_id = 4;
-  IntentAction action = 5;
-  string action_id = 6;
-}
-
-message IntentAction {
-  oneof kind {
-    CreateOrder create = 1;
-    ReplaceOrder replace = 2;
-    CancelOrder cancel = 3;
-  }
-}
-
-message CreateOrder {
-  string symbol = 1;
-  string route_strategy = 2;
-  string order_side = 3;
-  OrderSpec order_spec = 4;
-}
-
-message ReplaceOrder {
-  OrderSpec order_spec = 1;
-  string intent_id = 2;
-}
-
-message CancelOrder {
-  string intent_id = 1;
-}
-
-message OrderSpec {
-  oneof kind {
-    LimitOrderSpec limit = 1;
-    MarketOrderSpec market = 2;
-  }
-}
-
-message LimitOrderSpec {
-  Price price = 1;
-  int64 quantity = 2;
-  string time_in_force = 3;
-}
-
-message MarketOrderSpec {
-  int64 quantity = 1;
-}
-
-//
-// --------------------
 // BROKER DATA
 // --------------------
 //
