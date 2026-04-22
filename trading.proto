@@ -35,7 +35,6 @@ enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
   EVENT_TYPE_BROKER_ORDER = 1;
   EVENT_TYPE_BROKER_POSITION = 2;
-  EVENT_TYPE_INTENT_RESULT = 3;
 }
 
 message TradingEvent {
@@ -44,7 +43,6 @@ message TradingEvent {
     Heartbeat heartbeat = 2;
     BrokerOrder broker_order = 3;
     BrokerPosition broker_position = 4;
-    IntentResult intent_result = 5;
   }
 }
 
@@ -110,41 +108,6 @@ message LimitOrderSpec {
 
 message MarketOrderSpec {
   int64 quantity = 1;
-}
-
-//
-// --------------------
-// INTENT RESULT (STATE TRANSITIONS)
-// --------------------
-//
-
-enum IntentResultStatus {
-  INTENT_RESULT_STATUS_UNSPECIFIED = 0;
-
-  // transport-level
-  INTENT_RESULT_STATUS_SUBMITTED = 1;  // websocket write succeeded
-  INTENT_RESULT_STATUS_FAILED = 2;     // send failed
-
-  // broker-level
-  INTENT_RESULT_STATUS_ACCEPTED = 3;
-  INTENT_RESULT_STATUS_REJECTED = 4;
-  INTENT_RESULT_STATUS_CANCELLED = 5;
-  INTENT_RESULT_STATUS_FILLED = 6;
-  INTENT_RESULT_STATUS_PARTIALLY_FILLED = 7;
-  INTENT_RESULT_STATUS_SKIPPED = 8;
-}
-
-message IntentResult {
-  string action_id = 1;
-  string intent_id = 2;
-
-  IntentResultStatus status = 3;
-
-  reserved 4;
-  reserved "broker_order_id";
-  optional string error = 5;
-
-  google.protobuf.Timestamp published_at = 6;
 }
 
 //
