@@ -40,10 +40,15 @@ enum EventType {
 message TradingEvent {
   oneof event {
     Connected connected = 1;
-    Heartbeat heartbeat = 2;
-    BrokerOrder broker_order = 3;
-    BrokerPosition broker_position = 4;
+    Received received = 2;
+    Heartbeat heartbeat = 3;
+    BrokerOrder broker_order = 4;
+    BrokerPosition broker_position = 5;
   }
+}
+
+message Received {
+  string message = 1;
 }
 
 message Connected {
