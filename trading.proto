@@ -5,13 +5,30 @@ package trading;
 import "google/protobuf/timestamp.proto";
 
 service TradingService {
-  rpc StreamEvents(StreamEventsRequest) returns (stream TradingEvent);
+  rpc StreamEvents(stream StreamEventsRequest) returns (stream TradingEvent);
 }
 
 message StreamEventsRequest {
+  oneof msg {
+    Init init = 1;
+    Subscribe subscribe = 2;
+    Unsubscribe unsubscribe = 3;
+    Heartbeat ping = 4;
+  }
+}
+
+message Init {
   string account_id = 1;
+}
+
+message Subscribe {
   repeated EventType subscriptions = 2;
   string symbol = 3;
+}
+
+message Unsubscribe {
+  repeated EventType subscriptions = 1;
+  string symbol = 2;
 }
 
 enum EventType {
