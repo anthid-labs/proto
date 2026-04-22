@@ -49,6 +49,8 @@ message TradingEvent {
 
 message Received {
   string message = 1;
+  repeated string symbols = 2;
+  repeated EventType subscriptions = 3;
 }
 
 message Connected {
