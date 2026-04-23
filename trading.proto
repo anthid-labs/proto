@@ -40,14 +40,15 @@ enum EventType {
 message TradingEvent {
   oneof event {
     Connected connected = 1;
-    Received received = 2;
+    Subscribed subscribed = 2;
     Heartbeat heartbeat = 3;
     BrokerOrder broker_order = 4;
     BrokerPosition broker_position = 5;
   }
 }
 
-message Received {
+// Subscribe and Unsubscribe confirmation
+message Subscribed {
   string message = 1;
   repeated string symbols = 2;
   repeated EventType subscriptions = 3;
