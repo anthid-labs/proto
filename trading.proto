@@ -89,7 +89,7 @@ message BrokerOrder {
 
   string route_strategy = 13;
   int64 quantity = 14;
-  optional int64 filled_quantity = 15;
+  int64 filled_quantity = 15;
 
   string time_in_force = 16;
 
