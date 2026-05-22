@@ -10,25 +10,21 @@ service TradingService {
 
 message StreamEventsRequest {
   oneof msg {
-    Init init = 1;
-    Subscribe subscribe = 2;
-    Unsubscribe unsubscribe = 3;
-    Heartbeat ping = 4;
+    Subscribe subscribe = 1;
+    Unsubscribe unsubscribe = 2;
   }
 }
 
-message Init {
-  string account_id = 1;
-}
-
 message Subscribe {
+  string account_id = 1;
   repeated EventType subscriptions = 2;
-  string symbol = 3;
+  optional string symbol = 3;
 }
 
 message Unsubscribe {
-  repeated EventType subscriptions = 1;
-  string symbol = 2;
+  string account_id = 1;
+  repeated EventType subscriptions = 2;
+  optional string symbol = 3;
 }
 
 enum EventType {
@@ -39,23 +35,18 @@ enum EventType {
 
 message TradingEvent {
   oneof event {
-    Connected connected = 1;
-    Subscribed subscribed = 2;
-    Heartbeat heartbeat = 3;
-    BrokerOrder broker_order = 4;
-    BrokerPosition broker_position = 5;
+    Heartbeat heartbeat = 1;
+    SubscriptionUpdate subscription_update = 2;
+    BrokerOrder broker_order = 3;
+    BrokerPosition broker_position = 4;
   }
 }
 
 // Subscribe and Unsubscribe confirmation
-message Subscribed {
+message SubscriptionUpdate {
   string message = 1;
   repeated string symbols = 2;
   repeated EventType subscriptions = 3;
-}
-
-message Connected {
-  repeated EventType subscriptions = 1;
 }
 
 message Heartbeat {
@@ -64,7 +55,7 @@ message Heartbeat {
 
 //
 // --------------------
-// BROKER DATA
+// Platform Data
 // --------------------
 //
 
