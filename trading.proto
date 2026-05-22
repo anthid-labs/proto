@@ -15,15 +15,10 @@ message StreamEventsRequest {
   }
 }
 
-message Error {
-  string message = 1;
-}
-
 // Subscribe and Unsubscribe confirmation
 message SubscriptionUpdate {
-  string message = 1;
-  repeated string symbols = 2;
-  repeated EventType subscriptions = 3;
+  string trading_account_id = 1;
+  repeated EventType subscriptions = 2;
 }
 
 enum EventType {
@@ -40,6 +35,10 @@ message TradingEvent {
     BrokerOrder broker_order = 4;
     BrokerPosition broker_position = 5;
   }
+}
+
+message Error {
+  string message = 1;
 }
 
 message Heartbeat {
