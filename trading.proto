@@ -15,6 +15,10 @@ message StreamEventsRequest {
   }
 }
 
+message Error {
+  string message = 1;
+}
+
 message Subscribe {
   string account_id = 1;
   repeated EventType subscriptions = 2;
@@ -36,9 +40,10 @@ enum EventType {
 message TradingEvent {
   oneof event {
     Heartbeat heartbeat = 1;
-    SubscriptionUpdate subscription_update = 2;
-    BrokerOrder broker_order = 3;
-    BrokerPosition broker_position = 4;
+    Error error = 2;
+    SubscriptionUpdate subscription_update = 3;
+    BrokerOrder broker_order = 4;
+    BrokerPosition broker_position = 5;
   }
 }
 
