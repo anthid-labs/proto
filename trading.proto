@@ -10,15 +10,23 @@ service TradingService {
 
 message StreamEventsRequest {
   oneof msg {
-    SubscriptionUpdate subscribe = 1;
-    SubscriptionUpdate unsubscribe = 2;
+    Subscribe subscribe = 1;
+    Unsubscribe unsubscribe = 2;
   }
 }
 
 // Subscribe and Unsubscribe confirmation
-message SubscriptionUpdate {
+message Subscribe {
   string trading_account_id = 1;
   repeated EventType subscriptions = 2;
+}
+
+message Unsubscribe {
+  string trading_account_id = 1;
+}
+
+message Status {
+  string message = 1;
 }
 
 enum EventType {
@@ -31,7 +39,7 @@ message TradingEvent {
   oneof event {
     Heartbeat heartbeat = 1;
     Error error = 2;
-    SubscriptionUpdate subscription_update = 3;
+    Status status = 3;
     BrokerOrder broker_order = 4;
     BrokerPosition broker_position = 5;
   }
