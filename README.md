@@ -10,7 +10,7 @@ This repository currently keeps the proto surface in a single root-level file:
 └── trading.proto
 ```
 
-`trading.proto` defines the `trading` package, the `TradingService` gRPC service, request envelopes, event envelopes, and broker data messages.
+`trading.proto` defines the `trading` package, the `TradingService` gRPC service, subscription request messages, event envelopes, and broker data messages.
 
 ## Service
 
@@ -22,7 +22,7 @@ service TradingService {
 }
 ```
 
-Clients open a long-lived stream, send an initial account message, and then manage broker data subscriptions over the same connection.
+Clients open a long-lived stream and manage broker data subscriptions over the same connection.
 
 ## Client Messages
 
@@ -31,18 +31,28 @@ Client-to-server messages are wrapped in `StreamEventsRequest`:
 ```proto
 message StreamEventsRequest {
   oneof msg {
-    Init init = 1;
-    Subscribe subscribe = 2;
-    Unsubscribe unsubscribe = 3;
-    Heartbeat ping = 4;
+    Subscribe subscribe = 1;
+    Unsubscribe unsubscribe = 2;
   }
 }
 ```
 
-- `Init`: identifies the account with `account_id`.
-- `Subscribe`: adds event type subscriptions, optionally scoped by `symbol`.
-- `Unsubscribe`: removes event type subscriptions, optionally scoped by `symbol`.
-- `Heartbeat`: keeps the stream alive.
+- `Subscribe`: adds event type subscriptions for an `account_id`, optionally scoped by `symbol`.
+- `Unsubscribe`: removes event type subscriptions for an `account_id`, optionally scoped by `symbol`.
+
+```proto
+message Subscribe {
+  string account_id = 1;
+  repeated EventType subscriptions = 2;
+  optional string symbol = 3;
+}
+
+message Unsubscribe {
+  string account_id = 1;
+  repeated EventType subscriptions = 2;
+  optional string symbol = 3;
+}
+```
 
 ## Server Events
 
@@ -51,18 +61,16 @@ Server-to-client events are wrapped in `TradingEvent`:
 ```proto
 message TradingEvent {
   oneof event {
-    Connected connected = 1;
-    Received received = 2;
-    Heartbeat heartbeat = 3;
-    BrokerOrder broker_order = 4;
-    BrokerPosition broker_position = 5;
+    Heartbeat heartbeat = 1;
+    SubscriptionUpdate subscription_update = 2;
+    BrokerOrder broker_order = 3;
+    BrokerPosition broker_position = 4;
   }
 }
 ```
 
-- `Connected`: confirms active subscriptions after connection setup.
-- `Received`: acknowledges subscription updates and includes subscribed symbols.
 - `Heartbeat`: reports stream liveness with `sent_at`.
+- `SubscriptionUpdate`: confirms subscribe and unsubscribe requests, including the message, subscribed symbols, and event types.
 - `BrokerOrder`: broker-side order state and execution details.
 - `BrokerPosition`: broker-side position state by symbol.
 
