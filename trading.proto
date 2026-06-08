@@ -5,7 +5,11 @@ package trading;
 import "google/protobuf/timestamp.proto";
 
 service TradingService {
+  // Keep for backend/native clients.
   rpc StreamEvents(stream StreamEventsRequest) returns (stream TradingEvent);
+
+  // Add for browser clients.
+  rpc SubscribeEvents(Subscribe) returns (stream TradingEvent);
 }
 
 message StreamEventsRequest {
