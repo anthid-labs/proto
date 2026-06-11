@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+import "trading/trading_types.proto";
+
+message BrokerOrder {
+  string order_id = 1;
+  string intent_id = 2;
+
+  optional string external_order_id = 3;
+
+  string account_id = 4;
+  Broker broker = 5;
+  string symbol = 6;
+
+  OrderState order_state = 7;
+  OrderStatus order_status = 8;
+
+  OrderType order_type = 9;
+  OrderSide order_side = 10;
+
+  optional Price limit_price = 11;
+  optional Price average_price = 12;
+
+  RouteStrategy route_strategy = 13;
+  int64 quantity = 14;
+  int64 filled_quantity = 15;
+
+  TimeInForce time_in_force = 16;
+
+  google.protobuf.Timestamp received_at = 17;
+  string organization_id = 18;
+}
+
+message BrokerPosition {
+  string account_id = 1;
+  string symbol = 2;
+  int64 quantity = 3;
+  Price average_cost = 4;
+  google.protobuf.Timestamp received_at = 5;
+  string organization_id = 6;
+  Broker broker = 7;
+}
+
+message Price {
+  int64 integer = 1;
+  uint32 precision = 2;
+}

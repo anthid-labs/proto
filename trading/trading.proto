@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+import "trading/trading_models.proto";
+import "trading/trading_service.proto";
+import "trading/trading_types.proto";

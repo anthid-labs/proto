@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+import "trading/trading_models.proto";
+import "trading/trading_types.proto";
+
+service TradingService {
+  // Keep for backend/native clients.
+  rpc StreamEvents(stream StreamEventsRequest) returns (stream TradingEvent);
+
+  // Add for browser clients.
+  rpc SubscribeEvents(Subscribe) returns (stream TradingEvent);
+}
+
+message StreamEventsRequest {
+  oneof msg {
+    Subscribe subscribe = 1;
+    Unsubscribe unsubscribe = 2;
+  }
+}
+
+message Error {
+  string message = 1;
+}
+
+message Heartbeat {
+  google.protobuf.Timestamp sent_at = 1;
+}
+
+// Subscribe and Unsubscribe confirmation
+message Subscribe {
+  string trading_account_id = 1;
+  repeated EventType subscriptions = 2;
+}
+
+message Unsubscribe {
+  string trading_account_id = 1;
+}
+
+message Status {
+  string message = 1;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_BROKER_ORDER = 1;
+  EVENT_TYPE_BROKER_POSITION = 2;
+}
+
+message TradingEvent {
+  oneof event {
+    Heartbeat heartbeat = 1;
+    Error error = 2;
+    Status status = 3;
+    BrokerOrder broker_order = 4;
+    BrokerPosition broker_position = 5;
+  }
+}

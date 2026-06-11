@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package trading;
+
+// Broker integrations supported by Anthid.
+enum Broker {
+  BROKER_TYPE_UNSPECIFIED = 0; // Unspecified broker
+  BROKER_LIGHTSPEED_CONNECT = 1;      // Lightspeed Connect
+  BROKER_ALPACA = 2;                  // Alpaca
+}
+
+// Defines how an order should be executed.
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;     // Unspecified
+  ORDER_TYPE_LIMIT = 1;           // Limit order
+  ORDER_TYPE_MARKET = 2;          // Market order
+  ORDER_TYPE_FILL_OR_KILL = 3;    // Fill or Kill (FOK)
+  ORDER_TYPE_LIMIT_ON_OPEN = 4;   // Limit On Open (LOO)
+  ORDER_TYPE_LIMIT_ON_CLOSE = 5;  // Limit On Close (LOC)
+  ORDER_TYPE_MARKET_ON_OPEN = 6;  // Market On Open (MOO)
+  ORDER_TYPE_MARKET_ON_CLOSE = 7; // Market On Close (MOC)
+  ORDER_TYPE_STOP = 8;            // Stop order
+  ORDER_TYPE_STOP_LIMIT = 9;      // Stop Limit order
+  ORDER_TYPE_TRAILING_STOP = 10;  // Trailing Stop order
+}
+
+// Defines how long an order remains active.
+enum TimeInForce {
+  TIME_IN_FORCE_UNSPECIFIED = 0;         // Unspecified
+  TIME_IN_FORCE_DAY = 1;                 // Day
+  TIME_IN_FORCE_GOOD_TILL_CANCEL = 2;    // Good Till Cancel (GTC)
+  TIME_IN_FORCE_AT_OPEN = 3;             // At Open (OPG)
+  TIME_IN_FORCE_IMMEDIATE_OR_CANCEL = 4; // Immediate Or Cancel (IOC)
+  TIME_IN_FORCE_FILL_OR_KILL = 5;        // Fill Or Kill (FOK)
+  TIME_IN_FORCE_EXT = 6;                 // Extended Hours
+}
+
+// Side of an order.
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0; // Unspecified
+  ORDER_SIDE_BUY = 1;         // Buy
+  ORDER_SIDE_SELL = 2;        // Sell
+  ORDER_SIDE_SELL_SHORT = 3;  // Sell Short
+}
+
+// Exchange destination or routing strategy.
+enum RouteStrategy {
+  ROUTE_STRATEGY_UNSPECIFIED = 0; // Unspecified
+  ROUTE_STRATEGY_SMART = 1;       // Smart Routing
+  ROUTE_STRATEGY_AMEX = 2;        // American Stock Exchange (AMEX)
+  ROUTE_STRATEGY_ARCA = 3;        // NYSE Arca
+  ROUTE_STRATEGY_BATS = 4;        // BATS Global Markets
+  ROUTE_STRATEGY_BATY = 5;        // BATS Y-Exchange
+  ROUTE_STRATEGY_EDGA = 6;        // EDGA Exchange
+  ROUTE_STRATEGY_EDGX = 7;        // EDGX Exchange
+  ROUTE_STRATEGY_NSDQ = 8;        // NASDAQ Stock Market
+  ROUTE_STRATEGY_NYSE = 9;        // New York Stock Exchange
+}
+
+// Detailed execution status of an order.
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;      // Unspecified
+  ORDER_STATUS_PENDING_NEW = 1;      // Accepted and awaiting acknowledgment
+  ORDER_STATUS_NEW = 2;              // Active and working
+  ORDER_STATUS_PARTIALLY_FILLED = 3; // Partially executed
+  ORDER_STATUS_FILLED = 4;           // Fully executed
+  ORDER_STATUS_PENDING_CANCEL = 5;   // Cancel request submitted
+  ORDER_STATUS_CANCELLED = 6;        // Successfully cancelled
+  ORDER_STATUS_PENDING_REPLACE = 7;  // Replace request submitted
+  ORDER_STATUS_REPLACED = 8;         // Successfully replaced
+  ORDER_STATUS_STOPPED = 9;          // Stopped by broker or exchange
+  ORDER_STATUS_REJECTED = 10;        // Rejected by broker or exchange
+}
+
+// High-level lifecycle state derived from OrderStatus.
+enum OrderState {
+  ORDER_STATE_UNSPECIFIED = 0; // Unspecified
+  ORDER_STATE_OPEN = 1;        // Active or pending
+  ORDER_STATE_CLOSED = 2;      // Reached a terminal state
+  ORDER_STATE_REJECTED = 3;    // Rejected before becoming active
+}
