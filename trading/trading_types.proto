@@ -4,7 +4,7 @@ package trading;
 
 // Broker integrations supported by Anthid.
 enum Broker {
-  BROKER_TYPE_UNSPECIFIED = 0; // Unspecified broker
+  BROKER_UNSPECIFIED = 0; // Unspecified broker
   BROKER_LIGHTSPEED_CONNECT = 1;      // Lightspeed Connect
   BROKER_ALPACA = 2;                  // Alpaca
 }
