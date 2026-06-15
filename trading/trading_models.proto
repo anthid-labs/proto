@@ -21,12 +21,13 @@ message BrokerOrder {
   OrderType order_type = 9;
   OrderSide order_side = 10;
 
-  optional Price limit_price = 11;
-  optional Price average_price = 12;
+  optional string limit_price = 11;
+  optional string average_price = 12;
 
   RouteStrategy route_strategy = 13;
-  int64 quantity = 14;
-  int64 filled_quantity = 15;
+
+  string quantity = 14;
+  string filled_quantity = 15;
 
   TimeInForce time_in_force = 16;
 
@@ -37,14 +38,9 @@ message BrokerOrder {
 message BrokerPosition {
   string account_id = 1;
   string symbol = 2;
-  int64 quantity = 3;
-  Price average_cost = 4;
+  string quantity = 3;
+  string average_cost = 4;
   google.protobuf.Timestamp received_at = 5;
   string organization_id = 6;
   Broker broker = 7;
-}
-
-message Price {
-  int64 integer = 1;
-  uint32 precision = 2;
 }
