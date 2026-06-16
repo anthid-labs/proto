@@ -22,17 +22,18 @@ message BrokerOrder {
   OrderSide order_side = 10;
 
   optional string limit_price = 11;
-  optional string average_price = 12;
+  optional string stop_price = 12;
+  optional string average_price = 13;
 
-  RouteStrategy route_strategy = 13;
+  RouteStrategy route_strategy = 14;
 
-  string quantity = 14;
-  string filled_quantity = 15;
+  string quantity = 15;
+  string filled_quantity = 16;
 
-  TimeInForce time_in_force = 16;
+  TimeInForce time_in_force = 17;
 
-  google.protobuf.Timestamp received_at = 17;
-  string organization_id = 18;
+  google.protobuf.Timestamp received_at = 18;
+  string organization_id = 19;
 }
 
 message BrokerPosition {
