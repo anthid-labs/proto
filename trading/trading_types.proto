@@ -33,6 +33,7 @@ enum TimeInForce {
   TIME_IN_FORCE_IMMEDIATE_OR_CANCEL = 4; // Immediate Or Cancel (IOC)
   TIME_IN_FORCE_FILL_OR_KILL = 5;        // Fill Or Kill (FOK)
   TIME_IN_FORCE_EXT = 6;                 // Extended Hours
+  TIME_IN_FORCE_AT_CLOSE = 7;            // At Close
 }
 
 // Side of an order.
