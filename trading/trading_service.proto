@@ -47,6 +47,7 @@ enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
   EVENT_TYPE_BROKER_ORDER = 1;
   EVENT_TYPE_BROKER_POSITION = 2;
+  EVENT_TYPE_BROKER_TRADE = 3;
 }
 
 message TradingEvent {
@@ -56,5 +57,6 @@ message TradingEvent {
     Status status = 3;
     BrokerOrder broker_order = 4;
     BrokerPosition broker_position = 5;
+    BrokerTrade broker_trade = 6;
   }
 }

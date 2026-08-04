@@ -46,3 +46,21 @@ message BrokerPosition {
   string organization_id = 6;
   Broker broker = 7;
 }
+
+// A single execution against an order. One order can produce many of these,
+// so this is the fill-by-fill record that BrokerOrder aggregates.
+message BrokerTrade {
+  string account_id = 1;
+  // Broker assigned order id.
+  string order_id = 2;
+  // Platform order id the execution belongs to.
+  string client_order_id = 3;
+  string symbol = 4;
+  OrderSide side = 5;
+  // Shares in this execution, not the order's cumulative quantity.
+  string quantity = 6;
+  // Price of this execution, not the order's average price.
+  string price = 7;
+  google.protobuf.Timestamp received_at = 8;
+  string organization_id = 9;
+}
