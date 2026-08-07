@@ -35,6 +35,16 @@ message BrokerOrder {
 
   google.protobuf.Timestamp received_at = 19;
   string organization_id = 20;
+
+  // The caller's own correlation id for the order, set before the intent was
+  // submitted and carried across every replace and cancel under it.
+  //
+  // The intent id is minted by the platform and only reaches the caller on the
+  // response, so it cannot identify an order the caller has sent but not yet
+  // heard back about. This can: a run sets it before the request goes out, so
+  // every event on an account-wide stream is attributable to whoever placed
+  // the order rather than to whoever happens to be listening.
+  optional string client_reference_id = 21;
 }
 
 message BrokerPosition {
