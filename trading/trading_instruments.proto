@@ -224,12 +224,11 @@ message Currency {
 
 // Spot crypto: the asset itself, held outright.
 //
-// Sizes here are limited to six decimal places by the fixed-point encoding this
-// package uses for every numeric, so the smallest expressible size is 0.000001
-// of the base asset. That is finer than any venue's minimum order size and
-// coarser than the asset itself - bitcoin divides to eight places, and two of
-// them do not survive. Exact for ordering, lossy for reconciling a wallet to
-// its last unit.
+// The encoding is not the constraint on a size here. Every numeric in this
+// package is a decimal string carrying up to eighteen places, so a satoshi -
+// 0.00000001 - has ten places to spare and on-chain token amounts fit at their
+// own native precision. What does constrain a size is quantity_increment
+// below, which is the venue's own step.
 message Crypto {
   // The venue's spelling - BTC-USD on Coinbase, XXBTZUSD on Kraken.
   string symbol = 1;
