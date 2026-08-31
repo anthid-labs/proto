@@ -3,6 +3,7 @@ syntax = "proto3";
 package trading;
 
 import "google/protobuf/timestamp.proto";
+import "trading/trading_instruments.proto";
 import "trading/trading_types.proto";
 
 message BrokerOrder {
@@ -54,6 +55,22 @@ message BrokerOrder {
   // Optional because it is the broker's to supply and not every message
   // carries it.
   optional google.protobuf.Timestamp broker_sent_at = 22;
+
+  // What is being traded, where the platform resolved it.
+  //
+  // Beside `symbol` rather than in place of it. The symbol is the venue's own
+  // spelling and goes back out on the order, so it stays authoritative for
+  // routing; this carries the facts the spelling does not - the multiplier that
+  // makes ESZ5 worth fifty dollars a point, the settlement direction that
+  // decides which way an inverse perpetual moves, the payout a prediction
+  // contract settles at. A consumer valuing anything other than an equity needs
+  // them and cannot recover them from the string.
+  //
+  // Absent where no instrument was resolved, which is every message today: the
+  // field is the contract, and the producers that fill it are separate work.
+  // An absent instrument means unknown, never equity - a consumer that
+  // substitutes one is back to the assumption this field exists to remove.
+  optional Instrument instrument = 23;
 }
 
 message BrokerPosition {
@@ -86,6 +103,22 @@ message BrokerPosition {
   // broker said when a fill is disputed. Absent where the broker sends a
   // position with no time on it, or one the platform could not read.
   optional google.protobuf.Timestamp broker_sent_at = 8;
+
+  // What is being traded, where the platform resolved it.
+  //
+  // Beside `symbol` rather than in place of it. The symbol is the venue's own
+  // spelling and goes back out on the order, so it stays authoritative for
+  // routing; this carries the facts the spelling does not - the multiplier that
+  // makes ESZ5 worth fifty dollars a point, the settlement direction that
+  // decides which way an inverse perpetual moves, the payout a prediction
+  // contract settles at. A consumer valuing anything other than an equity needs
+  // them and cannot recover them from the string.
+  //
+  // Absent where no instrument was resolved, which is every message today: the
+  // field is the contract, and the producers that fill it are separate work.
+  // An absent instrument means unknown, never equity - a consumer that
+  // substitutes one is back to the assumption this field exists to remove.
+  optional Instrument instrument = 9;
 }
 
 // A single execution against an order. One order can produce many of these,
@@ -141,4 +174,20 @@ message BrokerTrade {
   // order restatement carrying a later broker stamp, so the two disagree
   // about one event.
   optional google.protobuf.Timestamp broker_sent_at = 14;
+
+  // What is being traded, where the platform resolved it.
+  //
+  // Beside `symbol` rather than in place of it. The symbol is the venue's own
+  // spelling and goes back out on the order, so it stays authoritative for
+  // routing; this carries the facts the spelling does not - the multiplier that
+  // makes ESZ5 worth fifty dollars a point, the settlement direction that
+  // decides which way an inverse perpetual moves, the payout a prediction
+  // contract settles at. A consumer valuing anything other than an equity needs
+  // them and cannot recover them from the string.
+  //
+  // Absent where no instrument was resolved, which is every message today: the
+  // field is the contract, and the producers that fill it are separate work.
+  // An absent instrument means unknown, never equity - a consumer that
+  // substitutes one is back to the assumption this field exists to remove.
+  optional Instrument instrument = 15;
 }
