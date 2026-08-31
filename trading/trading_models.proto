@@ -70,10 +70,12 @@ message BrokerPosition {
   // comparison spanning two clocks answers by their skew. The broker's own
   // time is carried separately, in broker_sent_at, where nothing orders by it.
   //
-  // Ingest is the only clock all three can share: a broker may restate a
-  // position without stamping it, and Lightspeed's PositionUpdate does exactly
-  // that. Ordering survives the substitution because the events arrive on one
-  // ordered connection and are stamped as they are reduced, in arrival order.
+  // It cannot be the broker's, and not for want of a field to read: one fill is
+  // reported twice, as the execution that crossed it and as the order restating
+  // what it has filled in total, and the broker stamps those two messages
+  // separately. Ordering survives the substitution because the events arrive on
+  // one ordered connection and are stamped as they are reduced, in arrival
+  // order.
   google.protobuf.Timestamp received_at = 5;
   string organization_id = 6;
   Broker broker = 7;
@@ -82,7 +84,7 @@ message BrokerPosition {
   //
   // Reporting only - latency against the platform's own view, and what the
   // broker said when a fill is disputed. Absent where the broker sends a
-  // position with no time on it at all.
+  // position with no time on it, or one the platform could not read.
   optional google.protobuf.Timestamp broker_sent_at = 8;
 }
 

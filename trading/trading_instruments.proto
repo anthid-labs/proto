@@ -1,0 +1,349 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+
+// What is being traded, as opposed to the ticker it is spelled with.
+//
+// Every message in trading_models.proto identifies its instrument as a bare
+// symbol string. That is enough for equities, where the symbol is the
+// instrument and one share is worth one share. It stops being enough the moment
+// anything else is traded:
+//
+//   - ESZ5 is worth fifty dollars a point, not one. A position in it valued as
+//     though it were an equity is wrong by a factor of fifty, and nothing in the
+//     string says so.
+//   - BTC-USD on one venue and BTCUSDT on another are the same exposure under
+//     two spellings, and neither says which venue settles it.
+//   - BTCUSD as an inverse perpetual is denominated in bitcoin rather than
+//     dollars, so its value moves the opposite way against price from the linear
+//     contract listed beside it - same spelling, opposite sign.
+//   - A Kalshi market settles at exactly one dollar or exactly zero, so its
+//     price is a probability rather than a value.
+//
+// These messages carry the facts that make a price mean something. They do not
+// replace the symbol field anywhere: every payload here keeps the venue's own
+// spelling, so a producer holding an Instrument can still populate the
+// string-shaped fields the existing messages carry.
+//
+// Numerics are decimal strings, as everywhere else in this package. They are
+// fixed-point values and a JSON number would round them on the way through a
+// double.
+
+// The kind of thing an Instrument is, without its payload.
+//
+// Instrument discriminates by its oneof and does not carry this - a second
+// discriminant could disagree with the first. This enum is for the places that
+// carry a class without the instrument: a subscription filter, a stored column,
+// a metric label, a capability check asking whether an account is cleared to
+// trade futures at all.
+enum AssetClass {
+  ASSET_CLASS_UNSPECIFIED = 0;
+  ASSET_CLASS_EQUITY = 1;
+  ASSET_CLASS_FUTURE = 2;
+  ASSET_CLASS_OPTION = 3;
+  ASSET_CLASS_CURRENCY = 4;
+  ASSET_CLASS_CRYPTO = 5;
+  ASSET_CLASS_PERPETUAL = 6;
+  ASSET_CLASS_PREDICTION = 7;
+}
+
+// Whether a listed option is a right to buy or to sell.
+enum OptionType {
+  OPTION_TYPE_UNSPECIFIED = 0;
+  OPTION_TYPE_CALL = 1;
+  OPTION_TYPE_PUT = 2;
+}
+
+// When a listed option may be exercised.
+enum ExerciseStyle {
+  EXERCISE_STYLE_UNSPECIFIED = 0;
+  EXERCISE_STYLE_AMERICAN = 1; // Any time before expiry
+  EXERCISE_STYLE_EUROPEAN = 2; // At expiry only
+}
+
+// What a Perpetual is a perpetual on.
+//
+// Perpetuals started on crypto and did not stay there: the same structure now
+// wraps equity indices and event outcomes, and the contract mechanics are
+// identical in each. This says what the exposure actually is, so a risk check
+// can ask what it is looking at without parsing a ticker.
+enum PerpetualUnderlying {
+  PERPETUAL_UNDERLYING_UNSPECIFIED = 0;
+  PERPETUAL_UNDERLYING_CRYPTO = 1;     // The original, and still the majority
+  PERPETUAL_UNDERLYING_FUTURE = 2;     // An index or commodity otherwise dated
+  PERPETUAL_UNDERLYING_PREDICTION = 3; // An event outcome
+}
+
+// Which asset a Perpetual pays out in.
+//
+// The difference is not bookkeeping. A linear contract is quoted and settled in
+// the quote asset, so its value rises with price like anything else. An inverse
+// contract is quoted in the quote asset and settled in the base one, which puts
+// price in the denominator: the position is worth
+// multiplier * quantity / price, and it is worth less as price rises.
+//
+// A venue commonly lists both against the same pair - BTCUSDT linear beside
+// XBTUSD inverse - so the spelling is not a reliable guide and this field is the
+// only thing that says which is which.
+//
+// UNSPECIFIED is present and meaningful. An absent settlement must not read as
+// linear: that is exactly the case where the position moves the opposite way
+// from what the reader assumed, and defaulting it would hide the one fact this
+// enum exists to carry.
+enum Settlement {
+  SETTLEMENT_UNSPECIFIED = 0;
+  SETTLEMENT_LINEAR = 1;  // price * multiplier * quantity
+  SETTLEMENT_INVERSE = 2; // multiplier * quantity / price
+}
+
+// Which side of a prediction market a contract pays on.
+//
+// UNSPECIFIED for the same reason as Settlement: an unset outcome that silently
+// read as YES would be a position on the opposite side of the one intended.
+enum PredictionOutcome {
+  PREDICTION_OUTCOME_UNSPECIFIED = 0;
+  PREDICTION_OUTCOME_YES = 1;
+  PREDICTION_OUTCOME_NO = 2;
+}
+
+// The single-letter month code futures contracts are spelled with, as the month
+// it stands for.
+//
+// The letters are assigned by convention rather than derivation - I is skipped
+// so it cannot be misread as a 1, and the rest do not follow the alphabet - so
+// the mapping is a lookup rather than arithmetic and is not carried here. The
+// numbers below are the calendar month, which makes them useful directly.
+enum FutureMonth {
+  FUTURE_MONTH_UNSPECIFIED = 0;
+  FUTURE_MONTH_JANUARY = 1;   // F
+  FUTURE_MONTH_FEBRUARY = 2;  // G
+  FUTURE_MONTH_MARCH = 3;     // H
+  FUTURE_MONTH_APRIL = 4;     // J
+  FUTURE_MONTH_MAY = 5;       // K
+  FUTURE_MONTH_JUNE = 6;      // M
+  FUTURE_MONTH_JULY = 7;      // N
+  FUTURE_MONTH_AUGUST = 8;    // Q
+  FUTURE_MONTH_SEPTEMBER = 9; // U
+  FUTURE_MONTH_OCTOBER = 10;  // V
+  FUTURE_MONTH_NOVEMBER = 11; // X
+  FUTURE_MONTH_DECEMBER = 12; // Z
+}
+
+// A tradable instrument, with the facts that make its price mean something.
+//
+// The oneof is the discriminant. There is deliberately no separate asset_class
+// field: two discriminants can disagree, and the one that is a copy of the
+// other is the one that goes stale. Read AssetClass from the variant.
+message Instrument {
+  oneof instrument {
+    Equity equity = 1;
+    Future future = 2;
+    // Named for its message rather than `option`, which begins an option
+    // declaration in the proto grammar.
+    OptionInstrument option_instrument = 3;
+    Currency currency = 4;
+    Crypto crypto = 5;
+    Perpetual perpetual = 6;
+    Prediction prediction = 7;
+  }
+}
+
+// A share in a listed company.
+message Equity {
+  string symbol = 1;
+
+  // The primary listing venue, where it was resolved.
+  //
+  // Absent for most equities: equity orders route by RouteStrategy and never
+  // needed it.
+  optional string exchange = 2;
+}
+
+// A dated futures contract.
+message Future {
+  // The venue's spelling of this contract month - ESZ5, or ESZ25.
+  string symbol = 1;
+
+  // The contract family the month belongs to - ES.
+  //
+  // Carried separately because it is what a strategy is actually expressed in.
+  // A position in "the ES front month" outlives any one symbol, and recovering
+  // the root by trimming characters off the end is guesswork the venue has
+  // already answered.
+  string root = 2;
+
+  // The exchange, in that exchange's own spelling - CME, CBOT, NYMEX.
+  //
+  // A string rather than an enum because the set is open and every vendor
+  // spells it differently: Rithmic says CME where Databento says GLBX.MDP3 for
+  // the same venue. An enum would have to pick one spelling and translate the
+  // rest, and this value goes back out on the order.
+  string exchange = 3;
+
+  // Last trade, not settlement - the moment the contract stops being tradable,
+  // which is what a producer needs to know before sending.
+  google.protobuf.Timestamp expiration = 4;
+
+  string tick_size = 5;
+
+  // Currency per full point of price movement - "50.0" for ES.
+  string multiplier = 6;
+
+  // What a point is denominated in - USD.
+  string currency = 7;
+}
+
+// A listed option on an equity or an index.
+message OptionInstrument {
+  // The OCC ticker.
+  string symbol = 1;
+  string underlying = 2;
+  google.protobuf.Timestamp expiration = 3;
+  string strike = 4;
+  OptionType option_type = 5;
+  ExerciseStyle exercise_style = 6;
+
+  // Shares per contract - "100.0" for a standard listed option.
+  string multiplier = 7;
+
+  optional string exchange = 8;
+  optional string tick_size = 9;
+}
+
+// A currency pair.
+message Currency {
+  // The pair as the venue spells it - EURUSD, or EUR/USD.
+  string symbol = 1;
+  // The currency being bought or sold - EUR.
+  string base = 2;
+  // The currency it is priced in - USD.
+  string quote = 3;
+}
+
+// Spot crypto: the asset itself, held outright.
+//
+// Sizes here are limited to six decimal places by the fixed-point encoding this
+// package uses for every numeric, so the smallest expressible size is 0.000001
+// of the base asset. That is finer than any venue's minimum order size and
+// coarser than the asset itself - bitcoin divides to eight places, and two of
+// them do not survive. Exact for ordering, lossy for reconciling a wallet to
+// its last unit.
+message Crypto {
+  // The venue's spelling - BTC-USD on Coinbase, XXBTZUSD on Kraken.
+  string symbol = 1;
+  // The asset being bought - BTC.
+  string base = 2;
+  // The asset it is priced in - USD.
+  string quote = 3;
+  string venue = 4;
+  string price_increment = 5;
+  // The smallest size step the venue accepts. See the precision note above.
+  string quantity_increment = 6;
+}
+
+// A perpetual contract: a derivative with no settlement date.
+//
+// It tracks its underlying without ever expiring, held in line by a funding
+// payment exchanged between longs and shorts on a fixed schedule rather than by
+// convergence to a settlement price. Two consequences matter more than the rest,
+// and both are places where treating a perpetual as a future goes wrong quietly:
+//
+//   1. There is no expiry. This message has no expiration field, and its absence
+//      means never rather than unknown. Anything that rolls, ages or expires
+//      positions has to tell those apart, or it will delete every perpetual
+//      position it holds while cleaning up stale futures.
+//   2. Settlement can invert the position. See Settlement.
+//
+// Funding is carried as a schedule rather than a rate because the rate is market
+// data that changes every interval, and an identity that went stale every eight
+// hours would be cached wrongly everywhere. What belongs here is when funding
+// happens; what it costs belongs on a quote.
+message Perpetual {
+  // The venue's spelling - BTCUSDT, BTC-PERP, XBTUSD.
+  string symbol = 1;
+  string base = 2;
+  string quote = 3;
+  string venue = 4;
+
+  // What the contract tracks.
+  PerpetualUnderlying underlying = 5;
+
+  Settlement settlement = 6;
+
+  // Units of the underlying per contract.
+  //
+  // For an inverse contract this is an amount of the quote asset - one contract
+  // of XBTUSD is one dollar of bitcoin - which is why it cannot simply be
+  // multiplied through. See Settlement for the two formulas.
+  string multiplier = 7;
+
+  FundingSchedule funding = 8;
+  string tick_size = 9;
+  string quantity_increment = 10;
+}
+
+// How often a Perpetual exchanges funding.
+//
+// The schedule, not the rate - see the note on Perpetual for why the rate is
+// deliberately absent.
+message FundingSchedule {
+  // Eight hours on most venues, one hour on some, and a handful settle
+  // continuously.
+  uint32 interval_seconds = 1;
+}
+
+// A binary event contract, settling at payout or at nothing.
+//
+// The price is a probability rather than a value, which is what separates this
+// from everything else here: a contract trading at 0.62 is the market saying
+// sixty-two percent, and it pays payout if the event resolves true. Sizing it
+// with a share-price formula produces a number with no meaning.
+message Prediction {
+  // The venue's identifier for this contract - a Kalshi market ticker, or a
+  // Polymarket token id.
+  string symbol = 1;
+
+  // The market this contract is one side of.
+  //
+  // Both sides of an event are separately tradable instruments with their own
+  // books, so the pair is only recoverable through this.
+  string market = 2;
+
+  // Which side of the market this contract pays on.
+  PredictionOutcome outcome = 3;
+
+  string venue = 4;
+
+  // What one contract pays if it resolves in its favour - "1.0" on Kalshi and
+  // Polymarket both.
+  string payout = 5;
+
+  // What the payout is denominated in - USD on Kalshi, USDC on Polymarket.
+  string currency = 6;
+
+  string tick_size = 7;
+
+  // When the event resolves, where the venue has published it.
+  //
+  // Absent for a market resolving on an event rather than a clock - "when the
+  // bill passes" has no date until it does. Distinct from a Perpetual, which
+  // has no expiration field at all because it will never have one.
+  optional google.protobuf.Timestamp expiration = 8;
+}
+
+// A contract month, decomposed from a symbol like ESZ5 or ESZ25.
+//
+// Separate from Future because it is what a symbol parses into, before anything
+// is known about tick size or multiplier. Those come from the venue's contract
+// definitions; this comes from the string alone. Future is the authoritative
+// identity; this is a reading of its symbol.
+message ContractMonth {
+  string root = 1;
+  FutureMonth month = 2;
+  // The full year - 2025, never 5 or 25. Exchanges spell the year with one
+  // digit or two and the one-digit form is ambiguous on its own, so the
+  // resolution is made by whoever parsed the symbol rather than left here.
+  int32 year = 3;
+}
