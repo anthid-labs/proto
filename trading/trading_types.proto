@@ -44,18 +44,34 @@ enum OrderSide {
   ORDER_SIDE_SELL_SHORT = 3;  // Sell Short
 }
 
-// Exchange destination or routing strategy.
-enum RouteStrategy {
-  ROUTE_STRATEGY_UNSPECIFIED = 0; // Unspecified
-  ROUTE_STRATEGY_SMART = 1;       // Smart Routing
-  ROUTE_STRATEGY_AMEX = 2;        // American Stock Exchange (AMEX)
-  ROUTE_STRATEGY_ARCA = 3;        // NYSE Arca
-  ROUTE_STRATEGY_BATS = 4;        // BATS Global Markets
-  ROUTE_STRATEGY_BATY = 5;        // BATS Y-Exchange
-  ROUTE_STRATEGY_EDGA = 6;        // EDGA Exchange
-  ROUTE_STRATEGY_EDGX = 7;        // EDGX Exchange
-  ROUTE_STRATEGY_NSDQ = 8;        // NASDAQ Stock Market
-  ROUTE_STRATEGY_NYSE = 9;        // New York Stock Exchange
+// Where an order is commanded to go.
+//
+// Deliberately not the same question as an instrument's venue, which says where
+// the instrument is *listed*. AAPL is listed on one exchange and routable to
+// several: the listing is a fact about the security that the instruments
+// catalogue owns, and this is an instruction the caller gives per order. Two
+// orders on the same instrument from the same account can carry different
+// values here, which is why this is a field of the order and not of the
+// instrument.
+//
+// Only equities give the choice any width. Every other asset class trades at
+// exactly one venue - ESZ5 means nothing away from CME - so for those the
+// instrument already determines the destination and ORDER_VENUE_SMART is the
+// honest answer: there is nothing to choose between.
+//
+// This was RouteStrategy, which named the mechanism rather than the thing and
+// read as though the platform routed every asset class this way.
+enum OrderVenue {
+  ORDER_VENUE_UNSPECIFIED = 0; // Unspecified
+  ORDER_VENUE_SMART = 1;       // Hand the destination to the broker's router
+  ORDER_VENUE_AMEX = 2;        // American Stock Exchange (AMEX)
+  ORDER_VENUE_ARCA = 3;        // NYSE Arca
+  ORDER_VENUE_BATS = 4;        // BATS Global Markets
+  ORDER_VENUE_BATY = 5;        // BATS Y-Exchange
+  ORDER_VENUE_EDGA = 6;        // EDGA Exchange
+  ORDER_VENUE_EDGX = 7;        // EDGX Exchange
+  ORDER_VENUE_NSDQ = 8;        // NASDAQ Stock Market
+  ORDER_VENUE_NYSE = 9;        // New York Stock Exchange
 }
 
 // Detailed execution status of an order.

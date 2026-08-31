@@ -156,8 +156,13 @@ message Equity {
 
   // The primary listing venue, where it was resolved.
   //
-  // Absent for most equities: equity orders route by RouteStrategy and never
-  // needed it.
+  // Where the security *is listed*, which is a fact the instruments catalogue
+  // owns - not where an order on it is sent. That is OrderVenue, it is a field
+  // of the order, and the two differ constantly: an equity listed on one
+  // exchange is routable to several.
+  //
+  // Absent for most equities: an order carries its own destination, so nothing
+  // forces the listing to be looked up.
   optional string exchange = 2;
 }
 

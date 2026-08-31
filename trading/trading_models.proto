@@ -15,6 +15,14 @@ message BrokerOrder {
 
   string account_id = 5;
   Broker broker = 6;
+
+  // The venue's own spelling of what is being traded.
+  //
+  // Derived from `instrument` rather than carried independently of it - the
+  // producer writes it from there, and the two cannot disagree. Kept on the
+  // message because reading a symbol is the common case and reaching into the
+  // instrument's oneof for it would make every consumer that only wants a
+  // string do the work of one that wants the whole contract.
   string symbol = 7;
 
   OrderState order_state = 8;
@@ -27,7 +35,7 @@ message BrokerOrder {
   optional string stop_price = 13;
   optional string average_price = 14;
 
-  RouteStrategy route_strategy = 15;
+  OrderVenue order_venue = 15;
 
   string quantity = 16;
   string filled_quantity = 17;
@@ -66,11 +74,16 @@ message BrokerOrder {
   // contract settles at. A consumer valuing anything other than an equity needs
   // them and cannot recover them from the string.
   //
-  // Absent where no instrument was resolved, which is every message today: the
-  // field is the contract, and the producers that fill it are separate work.
-  // An absent instrument means unknown, never equity - a consumer that
-  // substitutes one is back to the assumption this field exists to remove.
-  optional Instrument instrument = 23;
+  // Mandatory, despite proto3 having no way to say so: a consumer refuses the
+  // message rather than reading it without one. It replaces the order's own
+  // symbol field, which is now written from here.
+  //
+  // Absent is refused rather than filled in from `symbol`. An equity built from
+  // a bare symbol is exactly the assumption this field exists to remove, and it
+  // would be wrong for every future that came through. A producer that has not
+  // been taught to send one is a producer whose orders do not parse, which is
+  // the intended outcome while the fillers are being wired up.
+  Instrument instrument = 23;
 }
 
 message BrokerPosition {
