@@ -73,6 +73,8 @@ message TradingEvent {
 - `SubscriptionUpdate`: confirms subscribe and unsubscribe requests, including the message, subscribed symbols, and event types.
 - `BrokerOrder`: broker-side order state and execution details.
 - `BrokerPosition`: broker-side position state by symbol.
+- `BrokerTrade`: a single execution against an order.
+- `IntentAction`: a command the platform has committed, before the broker has answered it.
 
 ## Event Types
 
@@ -83,8 +85,14 @@ enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
   EVENT_TYPE_BROKER_ORDER = 1;
   EVENT_TYPE_BROKER_POSITION = 2;
+  EVENT_TYPE_BROKER_TRADE = 3;
+  EVENT_TYPE_INTENT_ACTION = 4;
 }
 ```
+
+The first three are the broker's account of what happened on an account. The
+last is the platform's own: what it was asked to do and has durably stored,
+delivered whether or not a broker connection exists.
 
 ## Shared Types
 

@@ -48,6 +48,13 @@ enum EventType {
   EVENT_TYPE_BROKER_ORDER = 1;
   EVENT_TYPE_BROKER_POSITION = 2;
   EVENT_TYPE_BROKER_TRADE = 3;
+
+  // Commands the platform has committed, before the broker has answered them.
+  //
+  // The other three are the broker's account of what happened. This one is the
+  // platform's account of what it was asked to do, and it is the only kind here
+  // that is delivered whether or not a broker connection exists.
+  EVENT_TYPE_INTENT_ACTION = 4;
 }
 
 message TradingEvent {
@@ -58,5 +65,6 @@ message TradingEvent {
     BrokerOrder broker_order = 4;
     BrokerPosition broker_position = 5;
     BrokerTrade broker_trade = 6;
+    IntentAction intent_action = 7;
   }
 }

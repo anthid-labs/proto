@@ -204,3 +204,72 @@ message BrokerTrade {
   // substitutes one is back to the assumption this field exists to remove.
   optional Instrument instrument = 15;
 }
+
+// One command of an intent, as the platform committed it.
+//
+// Published by the intents service's outbox worker after the command is
+// committed to Postgres, so a message here is an instruction the platform has
+// accepted and durably stored. It is not a report of anything the broker has
+// done: the broker's answer arrives separately as a BrokerOrder, keyed back to
+// this by `intent_id` and `seq`.
+//
+// This is a projection of the platform's internal command record, not a mirror
+// of it. The record also carries the id of the key or person who instructed the
+// action, the request id, the caller's idempotency key, and the originating IP
+// address. None of those are published here: a subscriber holding an
+// organization-wide subscription would otherwise be handed the addresses and
+// credential ids of everyone else in its organization, which is not a thing
+// watching your own order flow requires. `principal_type` is the part that is
+// published, because the class of credential is answerable without naming
+// anyone.
+message IntentAction {
+  string intent_id = 1;
+  string organization_id = 2;
+  string account_id = 3;
+
+  // Where this command sits in its intent's chain, ascending from the create.
+  //
+  // Ordering and versioning within one intent, and half of the identity a
+  // consumer dedups on: one command is (intent_id, seq), however many times it
+  // is delivered.
+  int64 seq = 4;
+
+  IntentActionType action_type = 5;
+
+  // The resolved payload, as it stood when the command was committed.
+  //
+  // A snapshot rather than a reference. A replace changes what the working
+  // order is, and a consumer reading these in sequence needs each command to
+  // say what it asked for rather than what the intent currently looks like.
+  string symbol = 6;
+  OrderSide order_side = 7;
+  OrderType order_type = 8;
+  optional string limit_price = 9;
+  optional string stop_price = 10;
+  OrderVenue order_venue = 11;
+  optional TimeInForce time_in_force = 12;
+  string quantity = 13;
+
+  // The caller's own correlation id, set before the intent was submitted and
+  // carried across every replace and cancel under it.
+  //
+  // The same field BrokerOrder carries, and the reason it is here: it is what
+  // lets a caller match a command it sent against the broker event that
+  // eventually answers it, before the platform's intent id has reached it.
+  optional string client_reference_id = 14;
+
+  // Which class of credential instructed this. See IntentPrincipalType.
+  IntentPrincipalType principal_type = 15;
+
+  // When the platform received the instruction.
+  google.protobuf.Timestamp received_at = 16;
+
+  // When the command was committed, on the database's clock rather than the
+  // writer's.
+  //
+  // Assigned by Postgres on insert, which is what makes it the same value on
+  // every republish of one command. Ordering and deduplication use it for that
+  // reason; `received_at` is when the request arrived and is not guaranteed to
+  // agree.
+  google.protobuf.Timestamp created_at = 17;
+}

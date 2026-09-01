@@ -96,3 +96,32 @@ enum OrderState {
   ORDER_STATE_CLOSED = 2;      // Reached a terminal state
   ORDER_STATE_REJECTED = 3;    // Rejected before becoming active
 }
+
+// What kind of instruction one command of an intent carries.
+//
+// An intent is a chain of these: a create, then any replaces or cancels made
+// against it. The chain is ordered by the command's `seq`, not by this.
+enum IntentActionType {
+  INTENT_ACTION_TYPE_UNSPECIFIED = 0; // Unspecified
+  INTENT_ACTION_TYPE_CREATE = 1;      // Open the intent
+  INTENT_ACTION_TYPE_REPLACE = 2;     // Amend the working order
+  INTENT_ACTION_TYPE_CANCEL = 3;      // Withdraw the working order
+}
+
+// Class of credential behind an instruction.
+//
+// An order placed with an organization's API key, one placed by a person signed
+// in to the dashboard, and one placed by an Anthid service acting on the
+// organization's behalf are three different claims once an order is disputed,
+// and a subscriber watching its own account has a legitimate reason to tell
+// them apart.
+//
+// The class only. Which key, which person, and from what address are recorded
+// on the platform's own copy of the command and are not published to
+// subscribers; see IntentAction.
+enum IntentPrincipalType {
+  INTENT_PRINCIPAL_TYPE_UNSPECIFIED = 0; // Unspecified
+  INTENT_PRINCIPAL_TYPE_API_KEY = 1;     // An organization's API key
+  INTENT_PRINCIPAL_TYPE_USER = 2;        // A signed-in person
+  INTENT_PRINCIPAL_TYPE_SERVICE = 3;     // An Anthid service acting on the org's behalf
+}
