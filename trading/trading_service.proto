@@ -33,6 +33,43 @@ message Heartbeat {
 message Subscribe {
   string trading_account_id = 1;
   repeated EventType subscriptions = 2;
+
+  // Narrows the per-instrument subjects to one instrument.
+  //
+  // The state stream keys a position at
+  // `...account.<account>.instrument.<class>.<key>.position` and an order at
+  // the same prefix plus `order.<order_id>`, so these two fields are the
+  // coordinates of that subject and nothing more. A subscriber that names them
+  // is handed one instrument's state instead of the whole account's.
+  //
+  // Deliberately the subject's own coordinates rather than an instrument
+  // message. Instrument identity lives in `rust_types` and is kept out of the
+  // wire on purpose: putting it here would mean threading it through every
+  // model and a database migration besides. Two strings that address a subject
+  // are not that.
+  //
+  // Both empty is the whole account, which is what every client sent before
+  // these existed and what they still mean by sending nothing.
+  //
+  // Trade, error and latency are account-scoped subjects with no instrument
+  // segment, so they are unaffected by these and continue to arrive for the
+  // whole account. A subscriber that wants one instrument's fills filters them
+  // itself.
+  //
+  // The venue's own spelling of the symbol, made subject-safe. Required for an
+  // instrument-scoped subscription: a class on its own addresses nothing.
+  string instrument_key = 3;
+
+  // The asset class the key belongs to, lower-case, as it appears in the
+  // subject.
+  //
+  // Optional, and empty means any class. That is not laziness: a resolver has
+  // to have filled the instrument for the class to be known, and until they all
+  // do, the same symbol reaches the stream under `equity` from one publisher
+  // and `unspecified` from another. Pinning a class while that is true is a
+  // subscription that silently matches nothing, and silence is indistinguishable
+  // from a flat account. Name it once the resolvers make it reliable.
+  string instrument_class = 4;
 }
 
 message Unsubscribe {
