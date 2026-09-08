@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+import "trading/trading_models.proto";
+import "trading/trading_types.proto";
+
+service TradingService {
+  // Bidirectional subscription management for backend/native clients.
+  rpc StreamEvents(stream StreamEventsRequest) returns (stream TradingEvent);
+
+  // One subscription per call, including browser clients over gRPC-Web.
+  rpc SubscribeEvents(Subscribe) returns (stream TradingEvent);
+}
+
+message StreamEventsRequest {
+  oneof msg {
+    Subscribe subscribe = 1;
+    Unsubscribe unsubscribe = 2;
+  }
+}
+
+message Error {
+  string message = 1;
+}
+
+message Heartbeat {
+  google.protobuf.Timestamp sent_at = 1;
+}
+
+// Select event kinds and scope; confirmations arrive as Status events.
+message Subscribe {
+  // A trading account UUID, or empty for the authenticated organization.
+  string trading_account_id = 1;
+  repeated EventType subscriptions = 2;
+
+  // Narrows the per-instrument subjects to one instrument.
+  //
+  // The state stream keys a position at
+  // `...account.<account>.instrument.<class>.<key>.position` and an order at
+  // the same prefix plus `order.<order_id>`, so these two fields are the
+  // coordinates of that subject and nothing more. A subscriber that names them
+  // is handed one instrument's state instead of the whole account's.
+  //
+  // These are subject coordinates, not an Instrument payload. Instrument
+  // metadata is carried separately on broker models.
+  // The current server applies these filters only to a named account;
+  // organization-wide subscriptions ignore them.
+  //
+  // Both empty is the whole account, which is what every client sent before
+  // these existed and what they still mean by sending nothing.
+  //
+  // Trade, error and latency are account-scoped subjects with no instrument
+  // segment, so they are unaffected by these and continue to arrive for the
+  // whole account. A subscriber that wants one instrument's fills filters them
+  // itself. Intent actions are also unaffected by these coordinates.
+  //
+  // The venue's own spelling of the symbol, made subject-safe. Required for an
+  // instrument-scoped subscription: a class on its own addresses nothing.
+  string instrument_key = 3;
+
+  // The asset class the key belongs to, lower-case, as it appears in the
+  // subject.
+  //
+  // Optional, and empty means any class. That is not laziness: a resolver has
+  // to have filled the instrument for the class to be known, and until they all
+  // do, the same symbol reaches the stream under `equity` from one publisher
+  // and `unspecified` from another. Pinning a class while that is true is a
+  // subscription that silently matches nothing, and silence is indistinguishable
+  // from a flat account. Name it once the resolvers make it reliable.
+  string instrument_class = 4;
+
+  // How the order subjects are delivered on attach.
+  //
+  // A position is always handed over as it stands the moment a subscriber
+  // attaches, because a position is a level and nothing about a reader makes
+  // it otherwise. An order reads either way: a reader that treats each message
+  // as news wants only what moves after it attached, and a reader that has to
+  // know what is working on the account before it acts wants every order's
+  // current state first. The platform cannot tell the two apart, so the
+  // subscriber says.
+  //
+  // Unspecified is live, which is what every client sent before this field
+  // existed and what they still mean by sending nothing. A subscriber that
+  // asks for primed delivery is told when the replay is over: see `Primed`.
+  OrderDelivery order_delivery = 5;
+}
+
+// How a subscriber wants the order subjects delivered on attach.
+enum OrderDelivery {
+  ORDER_DELIVERY_UNSPECIFIED = 0;
+
+  // Followed forward from the moment the subscription attaches. Nothing that
+  // finished before it is delivered.
+  ORDER_DELIVERY_LIVE = 1;
+
+  // Every order's current state on the subscribed subjects first, then
+  // followed forward. One message per order still retained, on every attach,
+  // and a `Primed` event once the last of them has been sent.
+  ORDER_DELIVERY_PRIMED = 2;
+}
+
+message Unsubscribe {
+  string trading_account_id = 1;
+}
+
+message Status {
+  string message = 1;
+}
+
+// The subjects a subscriber is primed with for one event kind have all been
+// delivered, and what follows on them happened after the subscription attached.
+//
+// Sent once per primed kind per attach: positions always, and orders when the
+// subscription asked for `ORDER_DELIVERY_PRIMED`. A subscriber that reads its
+// world off the replay has no other way to know the replay is over. The
+// messages themselves carry no such mark, and a subject with nothing retained
+// delivers nothing at all, so silence alone cannot say whether the account is
+// empty or the replay has not started.
+message Primed {
+  EventType event_type = 1;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_BROKER_ORDER = 1;
+  EVENT_TYPE_BROKER_POSITION = 2;
+  EVENT_TYPE_BROKER_TRADE = 3;
+
+  // Commands the platform has committed, before the broker has answered them.
+  //
+  // The other three are the broker's account of what happened. This one is the
+  // platform's account of what it was asked to do, and it is the only kind here
+  // that is delivered whether or not a broker connection exists.
+  EVENT_TYPE_INTENT_ACTION = 4;
+}
+
+message TradingEvent {
+  oneof event {
+    Heartbeat heartbeat = 1;
+    Error error = 2;
+    Status status = 3;
+    BrokerOrder broker_order = 4;
+    BrokerPosition broker_position = 5;
+    BrokerTrade broker_trade = 6;
+    IntentAction intent_action = 7;
+    Primed primed = 8;
+  }
+}

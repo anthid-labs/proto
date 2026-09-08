@@ -1,0 +1,275 @@
+syntax = "proto3";
+
+package trading;
+
+import "google/protobuf/timestamp.proto";
+import "trading/trading_instruments.proto";
+import "trading/trading_types.proto";
+
+message BrokerOrder {
+  string order_id = 1;
+  string intent_id = 2;
+  int64 command_seq = 3;
+
+  optional string external_order_id = 4;
+
+  string account_id = 5;
+  Broker broker = 6;
+
+  // The venue's own spelling of what is being traded.
+  //
+  // Derived from `instrument` rather than carried independently of it - the
+  // producer writes it from there, and the two cannot disagree. Kept on the
+  // message because reading a symbol is the common case and reaching into the
+  // instrument's oneof for it would make every consumer that only wants a
+  // string do the work of one that wants the whole contract.
+  string symbol = 7;
+
+  OrderState order_state = 8;
+  OrderStatus order_status = 9;
+
+  OrderType order_type = 10;
+  OrderSide order_side = 11;
+
+  optional string limit_price = 12;
+  optional string stop_price = 13;
+  optional string average_price = 14;
+
+  OrderVenue order_venue = 15;
+
+  string quantity = 16;
+  string filled_quantity = 17;
+
+  TimeInForce time_in_force = 18;
+
+  google.protobuf.Timestamp received_at = 19;
+  string organization_id = 20;
+
+  // The caller's own correlation id for the order, set before the intent was
+  // submitted and carried across every replace and cancel under it.
+  //
+  // The intent id is minted by the platform and only reaches the caller on the
+  // response, so it cannot identify an order the caller has sent but not yet
+  // heard back about. This can: a run sets it before the request goes out, so
+  // every event on an account-wide stream is attributable to whoever placed
+  // the order rather than to whoever happens to be listening.
+  optional string client_reference_id = 21;
+
+  // When the broker says it sent this, on the broker's clock.
+  //
+  // Reporting only. received_at is the field anything orders or compares by;
+  // see the note on it in BrokerPosition for why this one may not be.
+  //
+  // Optional because it is the broker's to supply and not every message
+  // carries it.
+  optional google.protobuf.Timestamp broker_sent_at = 22;
+
+  // What is being traded, where the platform resolved it.
+  //
+  // Beside `symbol` rather than in place of it. The symbol is the venue's own
+  // spelling and goes back out on the order, so it stays authoritative for
+  // routing; this carries the facts the spelling does not - the multiplier that
+  // makes ESZ5 worth fifty dollars a point, the settlement direction that
+  // decides which way an inverse perpetual moves, the payout a prediction
+  // contract settles at. A consumer valuing anything other than an equity needs
+  // them and cannot recover them from the string.
+  //
+  // Mandatory, despite proto3 having no way to say so: a consumer refuses the
+  // message rather than reading it without one. The order's symbol field
+  // remains on the wire and is written from this instrument.
+  //
+  // Absent is refused rather than filled in from `symbol`. An equity built from
+  // a bare symbol is exactly the assumption this field exists to remove, and it
+  // would be wrong for every future that came through. A producer that has not
+  // been taught to send one is a producer whose orders do not parse, which is
+  // the intended outcome while the fillers are being wired up.
+  Instrument instrument = 23;
+}
+
+message BrokerPosition {
+  string account_id = 1;
+  string symbol = 2;
+  string quantity = 3;
+  string average_cost = 4;
+
+  // When this reached the platform, on the ingest host's clock.
+  //
+  // One clock for every message on this stream, and deliberately ours rather
+  // than the broker's. Positions, orders and executions get compared to each
+  // other - is the position I hold older than the fill I have seen - and a
+  // comparison spanning two clocks answers by their skew. The broker's own
+  // time is carried separately, in broker_sent_at, where nothing orders by it.
+  //
+  // It cannot be the broker's, and not for want of a field to read: one fill is
+  // reported twice, as the execution that crossed it and as the order restating
+  // what it has filled in total, and the broker stamps those two messages
+  // separately. Ordering survives the substitution because the events arrive on
+  // one ordered connection and are stamped as they are reduced, in arrival
+  // order.
+  google.protobuf.Timestamp received_at = 5;
+  string organization_id = 6;
+  Broker broker = 7;
+
+  // When the broker says it sent this, on the broker's clock.
+  //
+  // Reporting only - latency against the platform's own view, and what the
+  // broker said when a fill is disputed. Absent where the broker sends a
+  // position with no time on it, or one the platform could not read.
+  optional google.protobuf.Timestamp broker_sent_at = 8;
+
+  // What is being traded, where the platform resolved it.
+  //
+  // Beside `symbol` rather than in place of it. The symbol is the venue's own
+  // spelling and goes back out on the order, so it stays authoritative for
+  // routing; this carries the facts the spelling does not - the multiplier that
+  // makes ESZ5 worth fifty dollars a point, the settlement direction that
+  // decides which way an inverse perpetual moves, the payout a prediction
+  // contract settles at. A consumer valuing anything other than an equity needs
+  // them and cannot recover them from the string.
+  //
+  // Absent where no instrument was resolved; population depends on the
+  // producer and its instrument resolver.
+  // An absent instrument means unknown, never equity - a consumer that
+  // substitutes one is back to the assumption this field exists to remove.
+  optional Instrument instrument = 9;
+}
+
+// A single execution against an order. One order can produce many of these,
+// so this is the fill-by-fill record that BrokerOrder aggregates.
+message BrokerTrade {
+  string account_id = 1;
+  // Broker assigned order id.
+  string order_id = 2;
+  // Platform order id the execution belongs to.
+  string client_order_id = 3;
+  string symbol = 4;
+  OrderSide side = 5;
+  // Shares in this execution, not the order's cumulative quantity.
+  string quantity = 6;
+  // Price of this execution, not the order's average price.
+  string price = 7;
+  google.protobuf.Timestamp received_at = 8;
+  string organization_id = 9;
+
+  // The broker's own id for this execution.
+  //
+  // The one field that names a fill rather than the order it belongs to.
+  // Without it a consumer keying on an execution has to derive an id from
+  // (order, timestamp, price, quantity), which is stable across a redelivery
+  // but collapses two genuinely distinct prints of the same size at the same
+  // price in the same nanosecond into one.
+  optional string exec_id = 10;
+
+  // The order's running totals as of this execution, string encoded like every
+  // other numeric here.
+  //
+  // These describe the order rather than the fill, and they are carried on the
+  // fill anyway because the pairing is not guaranteed: a consumer holding this
+  // execution and reading the totals off its own copy of the order is reading
+  // whichever of the two happened to arrive first.
+  //
+  // cumulative_quantity is what the order has filled in total including this
+  // execution, order_quantity is the size it was working, and leaves_quantity
+  // is what is still open. A leaves_quantity of zero is what makes this the
+  // last execution of the order.
+  optional string cumulative_quantity = 11;
+  optional string order_quantity = 12;
+  optional string leaves_quantity = 13;
+
+  // When the broker says it sent this, on the broker's clock.
+  //
+  // Reporting only. received_at is the field anything orders or compares by;
+  // see the note on it in BrokerPosition for why this one may not be.
+  //
+  // For an execution report this is the fill time as the broker states it,
+  // which is the value a fill is disputed on. It is not the value to decide
+  // whether a position includes the fill: the same fill also arrives as an
+  // order restatement carrying a later broker stamp, so the two disagree
+  // about one event.
+  optional google.protobuf.Timestamp broker_sent_at = 14;
+
+  // What is being traded, where the platform resolved it.
+  //
+  // Beside `symbol` rather than in place of it. The symbol is the venue's own
+  // spelling and goes back out on the order, so it stays authoritative for
+  // routing; this carries the facts the spelling does not - the multiplier that
+  // makes ESZ5 worth fifty dollars a point, the settlement direction that
+  // decides which way an inverse perpetual moves, the payout a prediction
+  // contract settles at. A consumer valuing anything other than an equity needs
+  // them and cannot recover them from the string.
+  //
+  // Absent where no instrument was resolved; population depends on the
+  // producer and its instrument resolver.
+  // An absent instrument means unknown, never equity - a consumer that
+  // substitutes one is back to the assumption this field exists to remove.
+  optional Instrument instrument = 15;
+}
+
+// One command of an intent, as the platform committed it.
+//
+// Published by the intents service's outbox worker after the command is
+// committed to Postgres, so a message here is an instruction the platform has
+// accepted and durably stored. It is not a report of anything the broker has
+// done: the broker's answer arrives separately as a BrokerOrder, keyed back to
+// this by `intent_id` and `seq`.
+//
+// This is a projection of the platform's internal command record, not a mirror
+// of it. The record also carries the id of the key or person who instructed the
+// action, the request id, the caller's idempotency key, and the originating IP
+// address. None of those are published here: a subscriber holding an
+// organization-wide subscription would otherwise be handed the addresses and
+// credential ids of everyone else in its organization, which is not a thing
+// watching your own order flow requires. `principal_type` is the part that is
+// published, because the class of credential is answerable without naming
+// anyone.
+message IntentAction {
+  string intent_id = 1;
+  string organization_id = 2;
+  string account_id = 3;
+
+  // Where this command sits in its intent's chain, ascending from the create.
+  //
+  // Ordering and versioning within one intent, and half of the identity a
+  // consumer dedups on: one command is (intent_id, seq), however many times it
+  // is delivered.
+  int64 seq = 4;
+
+  IntentActionType action_type = 5;
+
+  // The resolved payload, as it stood when the command was committed.
+  //
+  // A snapshot rather than a reference. A replace changes what the working
+  // order is, and a consumer reading these in sequence needs each command to
+  // say what it asked for rather than what the intent currently looks like.
+  string symbol = 6;
+  OrderSide order_side = 7;
+  OrderType order_type = 8;
+  optional string limit_price = 9;
+  optional string stop_price = 10;
+  OrderVenue order_venue = 11;
+  optional TimeInForce time_in_force = 12;
+  string quantity = 13;
+
+  // The caller's own correlation id, set before the intent was submitted and
+  // carried across every replace and cancel under it.
+  //
+  // The same field BrokerOrder carries, and the reason it is here: it is what
+  // lets a caller match a command it sent against the broker event that
+  // eventually answers it, before the platform's intent id has reached it.
+  optional string client_reference_id = 14;
+
+  // Which class of credential instructed this. See IntentPrincipalType.
+  IntentPrincipalType principal_type = 15;
+
+  // When the platform received the instruction.
+  google.protobuf.Timestamp received_at = 16;
+
+  // When the command was committed, on the database's clock rather than the
+  // writer's.
+  //
+  // Assigned by Postgres on insert, which is what makes it the same value on
+  // every republish of one command. Ordering and deduplication use it for that
+  // reason; `received_at` is when the request arrived and is not guaranteed to
+  // agree.
+  google.protobuf.Timestamp created_at = 17;
+}
