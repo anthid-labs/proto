@@ -66,5 +66,4 @@ package manifest, or generation pipeline are checked into this repository.
 
 ## License
 
-No license file is currently included in this repository. The previous README
-stated MIT, but the repository does not contain the corresponding license terms.
+Apache License 2.0.
