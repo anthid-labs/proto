@@ -132,6 +132,24 @@ message BrokerPosition {
   // An absent instrument means unknown, never equity - a consumer that
   // substitutes one is back to the assumption this field exists to remove.
   optional Instrument instrument = 9;
+
+  // What the broker itself reports about this position, where it reports it.
+  // Decimal strings, like the other money fields here. Each is absent when the
+  // broker does not send it - most do not - so absence means unknown, never
+  // zero.
+  //
+  // realized_pnl and daily_pnl are the broker's own figures, measured against
+  // whatever cost basis the broker keeps, which need not be what was paid: a
+  // broker may re-mark a carried position overnight.
+  optional string realized_pnl = 10;
+  optional string daily_pnl = 11;
+
+  // Running cash totals of what the broker has seen bought and sold in this
+  // symbol, over whatever session the broker counts them in. A trade made at
+  // the broker outside the platform moves these without an order to explain
+  // it, which is what lets its size and price be recovered.
+  optional string value_bought = 12;
+  optional string value_sold = 13;
 }
 
 // A single execution against an order. One order can produce many of these,
