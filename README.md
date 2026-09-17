@@ -42,7 +42,8 @@ Subscriptions use `trading_account_id`; payloads use `account_id`. Positions
 are primed with retained state on attach. Orders default to live delivery;
 request `ORDER_DELIVERY_PRIMED` to receive retained order state before live
 updates. A `Primed` event identifies the event kind whose replay has completed.
-This is retained current state, not an order-history query.
+This is retained current state, not an order-history query: an order that ended
+or a position that closed is removed an hour later.
 
 ## Get started
 

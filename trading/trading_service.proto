@@ -37,11 +37,11 @@ message Subscribe {
 
   // Narrows the per-instrument subjects to one instrument.
   //
-  // The state stream keys a position at
-  // `...account.<account>.instrument.<class>.<key>.position` and an order at
-  // the same prefix plus `order.<order_id>`, so these two fields are the
-  // coordinates of that subject and nothing more. A subscriber that names them
-  // is handed one instrument's state instead of the whole account's.
+  // The state stream holds orders and positions and nothing else. It keys a
+  // position at `...account.<account>.instrument.<class>.<key>.position` and an
+  // order at the same prefix plus `order.<order_id>`, so these two fields are
+  // the coordinates of that subject and nothing more. A subscriber that names
+  // them is handed one instrument's state instead of the whole account's.
   //
   // These are subject coordinates, not an Instrument payload. Instrument
   // metadata is carried separately on broker models.
@@ -51,10 +51,11 @@ message Subscribe {
   // Both empty is the whole account, which is what every client sent before
   // these existed and what they still mean by sending nothing.
   //
-  // Trade, error and latency are account-scoped subjects with no instrument
-  // segment, so they are unaffected by these and continue to arrive for the
-  // whole account. A subscriber that wants one instrument's fills filters them
-  // itself. Intent actions are also unaffected by these coordinates.
+  // Trades are not state. They are read from the journal, where every subject
+  // is scoped to an account with no instrument segment, so they are unaffected
+  // by these and continue to arrive for the whole account. A subscriber that
+  // wants one instrument's fills filters them itself. Intent actions are also
+  // unaffected by these coordinates.
   //
   // The venue's own spelling of the symbol, made subject-safe. Required for an
   // instrument-scoped subscription: a class on its own addresses nothing.
@@ -84,6 +85,10 @@ message Subscribe {
   // Unspecified is live, which is what every client sent before this field
   // existed and what they still mean by sending nothing. A subscriber that
   // asks for primed delivery is told when the replay is over: see `Primed`.
+  //
+  // Primed is current state, not history. An order that has finished stays on
+  // the stream for an hour after it ends and is then removed, so the replay is
+  // every working order plus the ones that ended within that hour.
   OrderDelivery order_delivery = 5;
 }
 
@@ -98,6 +103,10 @@ enum OrderDelivery {
   // Every order's current state on the subscribed subjects first, then
   // followed forward. One message per order still retained, on every attach,
   // and a `Primed` event once the last of them has been sent.
+  //
+  // Retained means working, or ended within the last hour: a filled,
+  // cancelled, rejected or stopped order is removed an hour after it ends. An
+  // order absent from the replay is not working.
   ORDER_DELIVERY_PRIMED = 2;
 }
 
@@ -118,6 +127,11 @@ message Status {
 // messages themselves carry no such mark, and a subject with nothing retained
 // delivers nothing at all, so silence alone cannot say whether the account is
 // empty or the replay has not started.
+//
+// Once positions are primed, a position that was not delivered is flat. A
+// position that closes is delivered at zero for an hour and then removed, the
+// same as an order that ends, so an old flat position and one never held look
+// the same: absent.
 message Primed {
   EventType event_type = 1;
 }
