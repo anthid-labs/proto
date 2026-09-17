@@ -26,7 +26,7 @@ application validity. Sequence fields are `int64`; preserve their full range
 | --- | --- |
 | `BrokerOrder` | Platform `order_id`, `intent_id`, and `command_seq`; optional broker `external_order_id` and caller `client_reference_id`. Contains state/status, execution parameters, quantity, and filled quantity. |
 | `BrokerPosition` | Account and symbol position level with quantity and average cost; optional instrument metadata, broker P&L, and bought/sold cash totals. |
-| `BrokerTrade` | Individual execution. `order_id` is the broker order ID; `client_order_id` is the platform order ID. Optional `exec_id` identifies the execution. Optional cumulative, order, and leaves quantities are totals at that execution. |
+| `BrokerTrade` | Individual execution. `order_id` is the broker order ID; `client_order_id` is the platform order ID. Optional `exec_id` identifies the execution. Optional cumulative, order, and leaves quantities are totals at that execution. Optional `command_seq` is the command the order was working under when it executed, so a fill that raced a replace names the terms that traded. |
 | `IntentAction` | Durable create, replace, or cancel command, identified by `(intent_id, seq)`. Includes the committed parameter snapshot and optional caller `client_reference_id`. |
 
 All four payloads carry `account_id` and `organization_id`. Only `BrokerOrder`

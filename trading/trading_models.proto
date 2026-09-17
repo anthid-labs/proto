@@ -226,6 +226,22 @@ message BrokerTrade {
   // An absent instrument means unknown, never equity - a consumer that
   // substitutes one is back to the assumption this field exists to remove.
   optional Instrument instrument = 15;
+
+  // The command the order was working under when this executed: the
+  // command_seq of the last command the broker had applied to it, as
+  // BrokerOrder.command_seq counts them.
+  //
+  // Carried on the fill for the same reason as the running totals above. A
+  // replace can race a fill, and a consumer that read the sequence off its own
+  // copy of the order would get the replace it sent rather than the terms that
+  // actually traded. Applied, not acknowledged: a broker can accept a replace
+  // and go on working the order at its old terms, and a fill in that window
+  // traded under the command before.
+  //
+  // Absent when the platform cannot say which command was in force - for an
+  // order placed outside it, or from a broker whose reports do not separate an
+  // accepted replace from an applied one.
+  optional int64 command_seq = 16;
 }
 
 // One command of an intent, as the platform committed it.

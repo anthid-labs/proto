@@ -16,7 +16,7 @@ separate intents API.
 - `BrokerPosition`: quantity and average cost, with optional broker-reported
   `realized_pnl`, `daily_pnl`, `value_bought`, and `value_sold`. Missing values
   mean unknown. The broker defines their cost basis and session boundaries.
-- `BrokerTrade`: one execution, with an optional execution ID and order totals
+- `BrokerTrade`: one execution, with an optional execution ID, order totals and the command it executed under
   as of that fill.
 - `IntentAction`: a committed create, replace, or cancel instruction, identified
   by `(intent_id, seq)`. Broker acceptance arrives separately.
