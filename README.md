@@ -9,6 +9,22 @@ or an order submission API. The platform's streamer implements the service;
 order creation, replacement, and cancellation happen through the platform's
 separate intents API.
 
+## Payloads
+
+- `BrokerOrder`: order state, cumulative fills, and platform, broker, and caller
+  correlation IDs.
+- `BrokerPosition`: quantity and average cost, with optional broker-reported
+  `realized_pnl`, `daily_pnl`, `value_bought`, and `value_sold`. Missing values
+  mean unknown. The broker defines their cost basis and session boundaries.
+- `BrokerTrade`: one execution, with an optional execution ID and order totals
+  as of that fill.
+- `IntentAction`: a committed create, replace, or cancel instruction, identified
+  by `(intent_id, seq)`. Broker acceptance arrives separately.
+
+Prices, quantities, and monetary values are decimal strings. Instruments carry
+asset-specific metadata; optional position and trade instruments can be absent.
+See the [data model](docs/data-model.md) for presence and correlation rules.
+
 ## Schema layout
 
 | File | Contents |
@@ -42,8 +58,15 @@ Subscriptions use `trading_account_id`; payloads use `account_id`. Positions
 are primed with retained state on attach. Orders default to live delivery;
 request `ORDER_DELIVERY_PRIMED` to receive retained order state before live
 updates. A `Primed` event identifies the event kind whose replay has completed.
-This is retained current state, not an order-history query: an order that ended
-or a position that closed is removed an hour later.
+The retention policy keeps working orders and open positions, and expires
+terminal-order and zero-position snapshots after an hour. Replaying retained
+state does not provide a history of transitions. `Primed` applies to its event
+kind within the requested scope; it is not an atomic snapshot across kinds or
+accounts. Trades and intent actions have no replay-completion marker.
+
+Retention and delivery are implemented by the platform. Updating these schemas
+does not update a deployed streamer or its producers; verify the versions used
+by the target environment.
 
 ## Get started
 

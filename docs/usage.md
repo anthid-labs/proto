@@ -1,9 +1,10 @@
 # Using the trading stream
 
 The wire contract is defined in [trading_service.proto](../trading/trading_service.proto).
-The platform behavior described below was checked against Anthid's streamer
-implementation on 2026-09-08. Deployment addresses, credentials, quotas, and
-retention settings are configured outside this repository.
+These notes describe the subscription contract and platform behavior. Deployment
+addresses, credentials, quotas, and retention settings are configured outside
+this repository. Schema updates alone do not deploy the corresponding behavior;
+see the implementation references in [development](development.md).
 
 ## Connection and authentication
 
@@ -26,7 +27,7 @@ For native gRPC, the fully qualified methods are
 | `subscriptions` | Event kinds to receive. Send at least one recognized, non-unspecified kind. An empty list or a list containing only unknown/unspecified values is rejected. |
 | `instrument_key` | Subject-safe instrument key for narrowing orders and positions on a named account. Empty means all instruments. |
 | `instrument_class` | Lowercase subject class, such as `equity`, when a key is set. Empty matches any class, including unresolved instruments. A class alone does not narrow a subscription. |
-| `order_delivery` | Unspecified or `ORDER_DELIVERY_LIVE` follows new order updates; `ORDER_DELIVERY_PRIMED` starts with retained current order state: every working order, plus orders that ended within the last hour. |
+| `order_delivery` | Unspecified or `ORDER_DELIVERY_LIVE` follows new order updates; `ORDER_DELIVERY_PRIMED` starts with retained current order state. Terminal snapshots expire under the platform's retention policy. |
 
 In the current server, an organization-wide subscription ignores instrument
 filters. Instrument filters on an account do not narrow trades or intent actions;
@@ -118,12 +119,15 @@ A `status` message or a quiet stream is not evidence that replay is complete.
 Trades and intent actions have no `Primed` completion contract. Retained order
 state is one message per retained order, not every historical order transition.
 
-Retained means current. A filled, cancelled, rejected or stopped order stays for
-an hour after it ends and is then removed, and a position that closes is
-delivered at zero for an hour and then removed. After a `Primed`, an order that
-was not delivered is not working, and a position that was not delivered is flat.
-Removal is not announced; use the order's terminal status or the position's zero
-quantity, which were delivered before it.
+The retention policy expires terminal-order and zero-position snapshots after
+an hour. Working orders and nonzero positions remain until updated. Within a
+successfully primed scope, an order absent from the order replay is not working,
+and a position absent from the position replay is flat under that policy. This
+says nothing about instruments or accounts excluded by the subscription.
+
+`TradingEvent` has no deletion variant. Use terminal order statuses and zero
+position quantities when received; a later replay may omit expired records.
+Clients attaching after expiry will not receive those closing snapshots.
 
 `Primed` contains no account ID, request ID, or instrument coordinates. Clients
 that need an unambiguous readiness boundary per scope should use separate calls

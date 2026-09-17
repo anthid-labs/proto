@@ -51,11 +51,9 @@ message Subscribe {
   // Both empty is the whole account, which is what every client sent before
   // these existed and what they still mean by sending nothing.
   //
-  // Trades are not state. They are read from the journal, where every subject
-  // is scoped to an account with no instrument segment, so they are unaffected
-  // by these and continue to arrive for the whole account. A subscriber that
-  // wants one instrument's fills filters them itself. Intent actions are also
-  // unaffected by these coordinates.
+  // Trades are delivered live for the account and are unaffected by these
+  // coordinates. A subscriber that wants one instrument's fills filters them
+  // itself. Intent actions are also unaffected by these coordinates.
   //
   // The venue's own spelling of the symbol, made subject-safe. Required for an
   // instrument-scoped subscription: a class on its own addresses nothing.
@@ -86,9 +84,9 @@ message Subscribe {
   // existed and what they still mean by sending nothing. A subscriber that
   // asks for primed delivery is told when the replay is over: see `Primed`.
   //
-  // Primed is current state, not history. An order that has finished stays on
-  // the stream for an hour after it ends and is then removed, so the replay is
-  // every working order plus the ones that ended within that hour.
+  // Primed is retained current state, not transition history. The platform's
+  // retention policy expires terminal-order snapshots after an hour; working
+  // orders remain until updated. Replay covers only the subscribed subjects.
   OrderDelivery order_delivery = 5;
 }
 
@@ -96,17 +94,18 @@ message Subscribe {
 enum OrderDelivery {
   ORDER_DELIVERY_UNSPECIFIED = 0;
 
-  // Followed forward from the moment the subscription attaches. Nothing that
-  // finished before it is delivered.
+  // New order updates from the moment the subscription attaches. No retained
+  // state is replayed, even for orders that are still working. A later update
+  // to an older order can still arrive.
   ORDER_DELIVERY_LIVE = 1;
 
   // Every order's current state on the subscribed subjects first, then
   // followed forward. One message per order still retained, on every attach,
   // and a `Primed` event once the last of them has been sent.
   //
-  // Retained means working, or ended within the last hour: a filled,
-  // cancelled, rejected or stopped order is removed an hour after it ends. An
-  // order absent from the replay is not working.
+  // The retention policy expires filled, cancelled, rejected, and stopped
+  // order snapshots after an hour. After successful priming, an order absent
+  // from the replay is not working within the subscribed scope.
   ORDER_DELIVERY_PRIMED = 2;
 }
 
@@ -121,17 +120,20 @@ message Status {
 // The subjects a subscriber is primed with for one event kind have all been
 // delivered, and what follows on them happened after the subscription attached.
 //
-// Sent once per primed kind per attach: positions always, and orders when the
-// subscription asked for `ORDER_DELIVERY_PRIMED`. A subscriber that reads its
-// world off the replay has no other way to know the replay is over. The
-// messages themselves carry no such mark, and a subject with nothing retained
-// delivers nothing at all, so silence alone cannot say whether the account is
-// empty or the replay has not started.
+// Sent once per requested primed kind per attach: positions when requested,
+// and orders when requested with `ORDER_DELIVERY_PRIMED`. Empty replays also
+// produce this marker. A subscriber reading state from the replay uses it to
+// know the replay is over. Data messages carry no such mark, and a subject
+// with nothing retained delivers nothing at all, so silence alone cannot say
+// whether the account is empty or the replay has not started.
 //
-// Once positions are primed, a position that was not delivered is flat. A
-// position that closes is delivered at zero for an hour and then removed, the
-// same as an order that ends, so an old flat position and one never held look
-// the same: absent.
+// Within the subscribed scope, a position absent from a successful position
+// replay is flat under the retention policy. Zero-position snapshots expire
+// after an hour, so an old flat position and one never held can both be absent.
+//
+// This marker has no account or subscription identifier and is not an atomic
+// snapshot boundary across event kinds. Use separate calls when readiness
+// must be attributed unambiguously to different account or instrument scopes.
 message Primed {
   EventType event_type = 1;
 }

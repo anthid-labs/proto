@@ -25,7 +25,7 @@ application validity. Sequence fields are `int64`; preserve their full range
 | Message | Interpretation and correlation |
 | --- | --- |
 | `BrokerOrder` | Platform `order_id`, `intent_id`, and `command_seq`; optional broker `external_order_id` and caller `client_reference_id`. Contains state/status, execution parameters, quantity, and filled quantity. |
-| `BrokerPosition` | Account and symbol position level with quantity and average cost; instrument metadata may be absent. |
+| `BrokerPosition` | Account and symbol position level with quantity and average cost; optional instrument metadata, broker P&L, and bought/sold cash totals. |
 | `BrokerTrade` | Individual execution. `order_id` is the broker order ID; `client_order_id` is the platform order ID. Optional `exec_id` identifies the execution. Optional cumulative, order, and leaves quantities are totals at that execution. |
 | `IntentAction` | Durable create, replace, or cancel command, identified by `(intent_id, seq)`. Includes the committed parameter snapshot and optional caller `client_reference_id`. |
 
@@ -50,6 +50,27 @@ quantity and an order's cumulative filled quantity as new executions.
 `IntentAction.principal_type` identifies the credential class (API key, user,
 or service). Credential/person IDs, IP addresses, request IDs, and idempotency
 keys from the internal command record are not published in this message.
+
+## Broker position figures
+
+`BrokerPosition` also carries four optional decimal strings supplied by the
+broker:
+
+| Field | Meaning |
+| --- | --- |
+| `realized_pnl` | Realized profit and loss using the broker's cost basis. |
+| `daily_pnl` | Profit and loss for the broker's current session. |
+| `value_bought` | Running cash total bought in this symbol during the broker's accounting period. |
+| `value_sold` | Running cash total sold in this symbol during that period. |
+
+Absence means the broker did not supply the figure; a supplied `"0"` is a
+measured zero. These are broker accounting figures, not platform-calculated
+returns. Cost bases and session boundaries can differ between brokers, and a
+carried position may be re-marked overnight.
+
+Bought/sold values are cash totals, not share quantities or individual fills.
+They can change for trading outside the platform and can reset at the broker's
+accounting boundary. They provide reconciliation evidence, not execution IDs.
 
 ## Clocks
 

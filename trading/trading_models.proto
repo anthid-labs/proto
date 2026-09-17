@@ -19,7 +19,7 @@ message BrokerOrder {
   // The venue's own spelling of what is being traded.
   //
   // Derived from `instrument` rather than carried independently of it - the
-  // producer writes it from there, and the two cannot disagree. Kept on the
+  // producer must write it from there and keep the two consistent. Kept on the
   // message because reading a symbol is the common case and reaching into the
   // instrument's oneof for it would make every consumer that only wants a
   // string do the work of one that wants the whole contract.
@@ -138,16 +138,21 @@ message BrokerPosition {
   // broker does not send it - most do not - so absence means unknown, never
   // zero.
   //
-  // realized_pnl and daily_pnl are the broker's own figures, measured against
-  // whatever cost basis the broker keeps, which need not be what was paid: a
-  // broker may re-mark a carried position overnight.
+  // These are broker accounting figures, not platform-calculated returns.
+  // The broker's cost basis need not be what was paid: a carried position may
+  // be re-marked overnight. The schema does not standardize session boundaries.
+
+  // Realized profit and loss using the broker's cost basis.
   optional string realized_pnl = 10;
+
+  // Profit and loss for the broker's current session.
   optional string daily_pnl = 11;
 
   // Running cash totals of what the broker has seen bought and sold in this
-  // symbol, over whatever session the broker counts them in. A trade made at
-  // the broker outside the platform moves these without an order to explain
-  // it, which is what lets its size and price be recovered.
+  // symbol, over whatever session the broker counts them in. These are cash
+  // amounts, not share quantities or individual executions. Trading outside
+  // the platform can move them, and session changes can reset them, so changes
+  // provide reconciliation evidence rather than unique fill identities.
   optional string value_bought = 12;
   optional string value_sold = 13;
 }
@@ -162,7 +167,7 @@ message BrokerTrade {
   string client_order_id = 3;
   string symbol = 4;
   OrderSide side = 5;
-  // Shares in this execution, not the order's cumulative quantity.
+  // Instrument units in this execution, not the order's cumulative quantity.
   string quantity = 6;
   // Price of this execution, not the order's average price.
   string price = 7;
