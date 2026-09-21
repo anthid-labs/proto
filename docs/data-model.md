@@ -105,8 +105,9 @@ futures root, calendar month, and full year, not a resolved futures contract.
 `BrokerOrder.instrument` is required by the documented application contract,
 although protobuf permits an absent message. Producers must populate it and
 keep `symbol` consistent with it. Position and trade instruments are optional;
-absence means unknown, not equity. `IntentAction` currently carries a symbol
-but has no instrument field.
+absence means unknown, not equity. `IntentAction.instrument` is required the
+same way: the platform resolves the symbol once, at the create, and every
+replace and cancel under the intent carries that instrument unchanged.
 
 Instrument listing/venue metadata is distinct from the order's `OrderVenue`
 routing instruction. Preserve contract multipliers, settlement type, payout,

@@ -311,4 +311,21 @@ message IntentAction {
   // reason; `received_at` is when the request arrived and is not guaranteed to
   // agree.
   google.protobuf.Timestamp created_at = 17;
+
+  // What the command trades, as the platform resolved `symbol` when the
+  // intent was created.
+  //
+  // Resolved once, at the create, and carried unchanged by every replace and
+  // cancel under it: the controls that admitted the order were evaluated
+  // against this instrument, and it is the one the order is placed in. A
+  // consumer that resolved `symbol` again could get a different answer across
+  // a catalogue sync.
+  //
+  // Beside `symbol` rather than in place of it, for the reason BrokerOrder
+  // gives: the symbol is the caller's spelling, and this carries the facts the
+  // spelling does not.
+  //
+  // Always set by the platform, despite proto3 having no way to say so.
+  // Absent means the message predates the field, never an equity.
+  Instrument instrument = 18;
 }
