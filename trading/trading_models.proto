@@ -84,6 +84,20 @@ message BrokerOrder {
   // been taught to send one is a producer whose orders do not parse, which is
   // the intended outcome while the fillers are being wired up.
   Instrument instrument = 23;
+
+  // The caller's strategy this order belongs to, as a UUID string, if it named
+  // one when it created the intent.
+  //
+  // What a strategy is belongs to the caller, not the platform: one run of a
+  // model, one cycle away from a target position and back, one idea. The
+  // platform only groups by it. Every order placed under an intent carries the
+  // intent's strategy, across every replace and cancel, so a consumer can sum
+  // a strategy's executions without joining back to the intents that caused
+  // them.
+  //
+  // Different from `client_reference_id`, which names one intent: a strategy
+  // spans as many intents as the caller places under it.
+  optional string strategy_id = 24;
 }
 
 message BrokerPosition {
@@ -328,4 +342,12 @@ message IntentAction {
   // Always set by the platform, despite proto3 having no way to say so.
   // Absent means the message predates the field, never an equity.
   Instrument instrument = 18;
+
+  // The caller's strategy this command belongs to, as a UUID string, if it
+  // named one when it created the intent.
+  //
+  // The same field BrokerOrder carries. Set on the create and carried
+  // unchanged by every replace and cancel under it, so every command of one
+  // intent names the same strategy.
+  optional string strategy_id = 19;
 }
