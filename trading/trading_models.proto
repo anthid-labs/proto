@@ -45,15 +45,10 @@ message BrokerOrder {
   google.protobuf.Timestamp received_at = 19;
   string organization_id = 20;
 
-  // The caller's own correlation id for the order, set before the intent was
-  // submitted and carried across every replace and cancel under it.
-  //
-  // The intent id is minted by the platform and only reaches the caller on the
-  // response, so it cannot identify an order the caller has sent but not yet
-  // heard back about. This can: a run sets it before the request goes out, so
-  // every event on an account-wide stream is attributable to whoever placed
-  // the order rather than to whoever happens to be listening.
-  optional string client_reference_id = 21;
+  // Was the caller's correlation id. A caller now mints the intent id itself
+  // before the create goes out, which names the order from the first event.
+  reserved 21;
+  reserved "client_reference_id";
 
   // When the broker says it sent this, on the broker's clock.
   //
@@ -95,8 +90,8 @@ message BrokerOrder {
   // a strategy's executions without joining back to the intents that caused
   // them.
   //
-  // Different from `client_reference_id`, which names one intent: a strategy
-  // spans as many intents as the caller places under it.
+  // Different from `intent_id`, which names one order: a strategy spans as
+  // many intents as the caller places under it.
   optional string strategy_id = 24;
 }
 
@@ -256,6 +251,19 @@ message BrokerTrade {
   // order placed outside it, or from a broker whose reports do not separate an
   // accepted replace from an applied one.
   optional int64 command_seq = 16;
+
+  // The intent this execution belongs to, as BrokerOrder.intent_id names it.
+  //
+  // The one id a consumer already holds for every order it placed, so a fill
+  // is attributable without first learning the platform's order id or the
+  // broker's from an order update, and without mapping the id of whichever
+  // command was in force back to the intent that sent it. The platform
+  // resolves it from the order the execution reports against, which holds
+  // across every replace.
+  //
+  // Absent when the execution is for an order the platform did not place,
+  // such as a manual trade at the broker.
+  optional string intent_id = 17;
 }
 
 // One command of an intent, as the platform committed it.
@@ -303,13 +311,9 @@ message IntentAction {
   optional TimeInForce time_in_force = 12;
   string quantity = 13;
 
-  // The caller's own correlation id, set before the intent was submitted and
-  // carried across every replace and cancel under it.
-  //
-  // The same field BrokerOrder carries, and the reason it is here: it is what
-  // lets a caller match a command it sent against the broker event that
-  // eventually answers it, before the platform's intent id has reached it.
-  optional string client_reference_id = 14;
+  // Was the caller's correlation id; see BrokerOrder's reserved field 21.
+  reserved 14;
+  reserved "client_reference_id";
 
   // Which class of credential instructed this. See IntentPrincipalType.
   IntentPrincipalType principal_type = 15;

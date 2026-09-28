@@ -24,10 +24,10 @@ application validity. Sequence fields are `int64`; preserve their full range
 
 | Message | Interpretation and correlation |
 | --- | --- |
-| `BrokerOrder` | Platform `order_id`, `intent_id`, and `command_seq`; optional broker `external_order_id` and caller `client_reference_id`. Contains state/status, execution parameters, quantity, and filled quantity. |
+| `BrokerOrder` | Platform `order_id`, `intent_id`, and `command_seq`; optional broker `external_order_id`. Contains state/status, execution parameters, quantity, and filled quantity. |
 | `BrokerPosition` | Account and symbol position level with quantity and average cost; optional instrument metadata, broker P&L, and bought/sold cash totals. |
-| `BrokerTrade` | Individual execution. `order_id` is the broker order ID; `client_order_id` is the platform order ID. Optional `exec_id` identifies the execution. Optional cumulative, order, and leaves quantities are totals at that execution. Optional `command_seq` is the command the order was working under when it executed, so a fill that raced a replace names the terms that traded. |
-| `IntentAction` | Durable create, replace, or cancel command, identified by `(intent_id, seq)`. Includes the committed parameter snapshot and optional caller `client_reference_id`. |
+| `BrokerTrade` | Individual execution. `order_id` is the broker order ID; `client_order_id` is the platform order ID. Optional `exec_id` identifies the execution. Optional cumulative, order, and leaves quantities are totals at that execution. Optional `command_seq` is the command the order was working under when it executed, so a fill that raced a replace names the terms that traded. Optional `intent_id` is the intent the execution belongs to, resolved by the platform across replaces; absent for an order placed outside the platform. |
+| `IntentAction` | Durable create, replace, or cancel command, identified by `(intent_id, seq)`. Includes the committed parameter snapshot. |
 
 All four payloads carry `account_id` and `organization_id`. Only `BrokerOrder`
 and `BrokerPosition` have a `broker` enum field; do not expect it on a trade or
@@ -38,9 +38,9 @@ broker supports every represented asset or order type.
 Correlate `IntentAction.seq` with `BrokerOrder.command_seq` under the same
 `intent_id`. An intent action says the platform durably stored an instruction;
 it can arrive without a broker connection and is not proof the broker acted.
-Use `(intent_id, seq)` to deduplicate republished commands. `client_reference_id`
-is caller correlation across an intent's create/replace/cancel chain, not a
-unique identifier for each command or fill.
+Use `(intent_id, seq)` to deduplicate republished commands. A caller may mint
+the `intent_id` itself on the create, so every event for the order is
+attributable to it before the submission's response arrives.
 
 Use an execution's `exec_id` where supplied, with its account/broker context.
 Without it the schema offers no universally collision-free execution ID; an
