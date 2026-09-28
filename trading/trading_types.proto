@@ -6,7 +6,10 @@ package trading;
 enum Broker {
   BROKER_UNSPECIFIED = 0; // Unspecified broker
   BROKER_LIGHTSPEED_CONNECT = 1;      // Lightspeed Connect
-  BROKER_ALPACA = 2;                  // Alpaca
+
+  // Alpaca, retired.
+  reserved 2;
+  reserved "BROKER_ALPACA";
 }
 
 // Defines how an order should be executed.

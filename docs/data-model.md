@@ -31,8 +31,8 @@ application validity. Sequence fields are `int64`; preserve their full range
 
 All four payloads carry `account_id` and `organization_id`. Only `BrokerOrder`
 and `BrokerPosition` have a `broker` enum field; do not expect it on a trade or
-intent action. The current `Broker` enum names Lightspeed Connect and Alpaca
-plus unspecified. An enum or instrument variant does not guarantee a deployed
+intent action. The current `Broker` enum names Lightspeed Connect plus
+unspecified. An enum or instrument variant does not guarantee a deployed
 broker supports every represented asset or order type.
 
 Correlate `IntentAction.seq` with `BrokerOrder.command_seq` under the same
