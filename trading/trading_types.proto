@@ -12,6 +12,13 @@ enum Broker {
   reserved "BROKER_ALPACA";
 }
 
+// Whether an account trades real money or a broker's paper venue.
+enum BrokerEnvironment {
+  BROKER_ENVIRONMENT_UNSPECIFIED = 0;
+  BROKER_ENVIRONMENT_PAPER = 1;
+  BROKER_ENVIRONMENT_LIVE = 2;
+}
+
 // Defines how an order should be executed.
 enum OrderType {
   ORDER_TYPE_UNSPECIFIED = 0;     // Unspecified

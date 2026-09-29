@@ -88,6 +88,18 @@ message Subscribe {
   // retention policy expires terminal-order snapshots after an hour; working
   // orders remain until updated. Replay covers only the subscribed subjects.
   OrderDelivery order_delivery = 5;
+
+  // The broker environment the subscription covers. Required: unspecified is
+  // refused.
+  //
+  // A named account must be in it, or the subscription is refused rather than
+  // answered with either environment's events. With no account named, the
+  // subscription covers every account the organization has in this
+  // environment when it attaches. An account added afterwards is not in it
+  // until the subscriber subscribes again.
+  //
+  // An API key needs `paper:intent:read` or `live:intent:read` for it.
+  BrokerEnvironment environment = 6;
 }
 
 // How a subscriber wants the order subjects delivered on attach.
@@ -111,6 +123,11 @@ enum OrderDelivery {
 
 message Unsubscribe {
   string trading_account_id = 1;
+
+  // The environment of the subscription to end. An organization-wide
+  // subscription is one per environment, so with no account named this says
+  // which. Required, as on `Subscribe`.
+  BrokerEnvironment environment = 2;
 }
 
 message Status {
