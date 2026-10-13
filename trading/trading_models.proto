@@ -93,6 +93,20 @@ message BrokerOrder {
   // Different from `intent_id`, which names one order: a strategy spans as
   // many intents as the caller places under it.
   optional string strategy_id = 24;
+
+  // When the platform received the broker message that brought
+  // filled_quantity to its value, on the ingest host's clock.
+  //
+  // received_at is the time of the order's latest statement, whatever that
+  // statement was: a cancel acknowledged after the last print, or a replace
+  // refused because the order had already filled, restates a filled order
+  // with a newer received_at and no new fill. A consumer asking "has my
+  // position counted this order's last fill" compares the position against
+  // this field, not received_at, or it waits on a fill that never happened.
+  //
+  // Absent on an order that has not filled, and on one written before the
+  // field existed; a consumer reads absent as "at or before received_at".
+  optional google.protobuf.Timestamp last_fill_at = 25;
 }
 
 message BrokerPosition {
