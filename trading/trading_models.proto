@@ -107,6 +107,27 @@ message BrokerOrder {
   // Absent on an order that has not filled, and on one written before the
   // field existed; a consumer reads absent as "at or before received_at".
   optional google.protobuf.Timestamp last_fill_at = 25;
+
+  // What the broker said alongside the statement this snapshot was built
+  // from: its own status code and text, verbatim.
+  //
+  // A broker's answer to a command is not always a status transition. On
+  // 2026-10-12 Lightspeed refused every replace of a partially filled sell
+  // with `OrderCancelReject`, error 1300, "TE: Order cannot be split due to
+  // Long/Short marking", and restated the order at its old terms with the
+  // same text; the order's status was PARTIALLY_FILLED before and after. With
+  // nothing but the status on the wire, that refusal was indistinguishable
+  // from the order being restated, and a consumer read it as the replace
+  // having been applied. These two fields carry the words, so a refusal can
+  // be read as one and so the ledger holds what the broker actually said.
+  //
+  // Both are the message's own, not the order's history: a later statement
+  // that says nothing clears them. Zero is Lightspeed's "OK"; the code is
+  // the broker's, not a platform enumeration, and a consumer that needs to
+  // classify it reads the text as well. Absent when the broker sent nothing,
+  // and on every snapshot written before the fields existed.
+  optional int32 status_code = 26;
+  optional string status_text = 27;
 }
 
 message BrokerPosition {
